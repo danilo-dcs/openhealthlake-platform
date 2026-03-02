@@ -1,3 +1,4 @@
+# This docker-compose file launches a standalone Self Hosted Lakehosue application
 services:
   couchbase:
     image: couchbase
@@ -12,15 +13,35 @@ services:
       - 18091:18091 # couchbase admin client https
     restart: always
     environment:
-      COUCHBASE_ADMINISTRATOR_USERNAME: admin
-      COUCHBASE_ADMINISTRATOR_PASSWORD: admin1234
+      COUCHBASE_ADMINISTRATOR_USERNAME: ${USER}
+      COUCHBASE_ADMINISTRATOR_PASSWORD: ${PASSWORD}
     networks:
       - couchbase-network
       - app-network
     volumes:
       - couchbase-data:/opt/couchbase/var
       - ./couchbase/scripts:/scripts
-    entrypoint: ['bash', '/scripts/custom_entrypoint.sh']
+    # entrypoint: ['bash', '/scripts/custom_entrypoint.sh']
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: ${USER}
+      MINIO_ROOT_PASSWORD: ${PASSWORD}
+      MINIO_DOMAIN: minio
+      MINIO_REGION_NAME: af-south-1
+      MINIO_BROWSER: 'on'
+    volumes:
+      - ./minio-data:/data
+      - ./minio-config:/root/.minio
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - minio-network
 
   passport-broker:
     container_name: passport-broker
@@ -32,6 +53,7 @@ services:
       - passport_usr_data:/usr
     networks:
       - app-network
+      - minio-network
 
   backend:
     container_name: backend
@@ -91,6 +113,8 @@ networks:
   app-network:
     driver: bridge
   couchbase-network:
+    driver: bridge
+  minio-network:
     driver: bridge
 
 volumes:
