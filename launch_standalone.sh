@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Checking entries
 if [ -z "$MODE" ] || [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASSWORD" ]; then
     echo "Usage: $0 <mode> <admin_username> <admin_password>"
-    echo "  <mode>: dev or prod"
+    echo "  <mode>: dev (full application in dev mode), prod (full application in prod mode), or db (database initialization only)"
     echo "  <admin_username>: username for couchbase and minio admin user"
     echo "  <admin_password>: password for couchbase and minio admin user"
     exit 1
@@ -39,7 +39,10 @@ upsert_env "COUCHBASE_USER" "$ADMIN_USER"
 upsert_env "COUCHBASE_PASSWORD" "$ADMIN_PASSWORD"
 
 # Building images and running containers
-if [ "$MODE" = "dev" ]; then
+if [ "$MODE" = "db" ]; then
+    echo "Starting in database initialization mode..."
+    sudo -E docker-compose -f docker-compose.yml up -d minio passport-broker couchbase
+elif [ "$MODE" = "dev" ]; then
     echo "Starting in development mode..."
     sudo -E docker-compose -f docker-compose.yml up -d couchbase minio passport-broker backend frontend
 elif [ "$MODE" = "prod" ]; then
