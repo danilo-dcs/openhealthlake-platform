@@ -41,13 +41,13 @@ upsert_env "COUCHBASE_PASSWORD" "$ADMIN_PASSWORD"
 # Building images and running containers
 if [ "$MODE" = "db" ]; then
     echo "Starting in database initialization mode..."
-    sudo -E docker-compose -f docker-compose.yml up -d minio passport-broker couchbase
+    sudo -E docker compose -f docker-compose.yml up -d minio passport-broker couchbase
 elif [ "$MODE" = "dev" ]; then
     echo "Starting in development mode..."
-    sudo -E docker-compose -f docker-compose.yml up -d couchbase minio passport-broker backend frontend
+    sudo -E docker compose -f docker-compose.yml up -d couchbase minio passport-broker backend frontend
 elif [ "$MODE" = "prod" ]; then
     echo "Starting in production mode..."
-    sudo -E docker-compose -f docker-compose.yml up -d couchbase minio passport-broker backend
+    sudo -E docker compose -f docker-compose.yml up -d couchbase minio passport-broker backend
 else
     echo "Invalid mode: $MODE. Use 'dev' or 'prod'."
     exit 1
