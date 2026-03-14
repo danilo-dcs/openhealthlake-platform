@@ -1,5 +1,6 @@
 #!/bin/sh
 
-sudo chmod +x ./initialize_minio.sh
+# sudo chmod +x ./initialize_minio.sh
+set -eu
 
-./initialize_minio.sh ${USER} ${PASSWORD}
+sh ./initialize_minio.sh ${ADMIN_USER} ${ADMIN_PASSWORD}
