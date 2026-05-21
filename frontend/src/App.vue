@@ -132,7 +132,7 @@ const toggle = (event: any) => {
         <img :src="dsi_logo" alt="Logo" class="h-16" />
         <img :src="ceri_logo" alt="Logo" class="h-16" />
         <img :src="ita_logo" alt="Logo" class="h-14" />
-        <img :src="comp2bio_logo" alt="Logo" class="h-16" />
+        <img :src="comp2bio_logo" alt="Logo" class="h-8" />
       </div>
       <div class="flex flex-col items-center space-y-2">
         <a
