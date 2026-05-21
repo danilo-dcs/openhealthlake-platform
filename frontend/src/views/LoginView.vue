@@ -279,7 +279,7 @@ const loginOnSubmit = async (): Promise<void> => {
             <img :src="dsi_logo" alt="Logo" class="h-15" />
             <img :src="ceri_logo" alt="Logo" class="h-20" />
             <img :src="ita_logo" alt="Logo" class="h-14" />
-            <img :src="comp2bio_logo" alt="Logo" class="h-7" />
+            <img :src="comp2bio_logo" alt="Logo" class="h-4" />
           </div>
           <!-- Powered by
           <span class="font-semibold text-[#2a95ea]"> INFORM Africa Hub </span> -->
