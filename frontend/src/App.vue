@@ -124,22 +124,24 @@ const toggle = (event: any) => {
     <!-- Footer -->
     <footer
       v-if="isHeaderVisible"
-      class="bg-gray-200 w-full p-8 text-center text-sm text-gray-700 flex flex-col items-center gap-y-7"
+      class="bg-gray-200 w-full p-5 sm:p-8 text-center text-xs sm:text-sm text-gray-700 flex flex-col items-center gap-y-5 sm:gap-y-7"
     >
       <div class="font-semibold text-gray-700">Powered by:</div>
-      <div class="flex flex-row items-center gap-x-10">
-        <img :src="inform_logo" alt="Logo" class="h-16" />
-        <img :src="dsi_logo" alt="Logo" class="h-16" />
-        <img :src="ceri_logo" alt="Logo" class="h-16" />
-        <img :src="ita_logo" alt="Logo" class="h-14" />
-        <img :src="comp2bio_logo" alt="Logo" class="h-8" />
+
+      <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-x-10">
+        <img :src="inform_logo" alt="Logo" class="h-10 sm:h-16" />
+        <img :src="dsi_logo" alt="Logo" class="h-10 sm:h-16" />
+        <img :src="ceri_logo" alt="Logo" class="h-10 sm:h-16" />
+        <img :src="ita_logo" alt="Logo" class="h-9 sm:h-14" />
+        <img :src="comp2bio_logo" alt="Logo" class="h-6 sm:h-8" />
       </div>
-      <div class="flex flex-col items-center space-y-2">
+
+      <div class="flex flex-col items-center space-y-2 px-2">
         <a
           href="https://github.com/danilo-dcs/lakehouse-platform"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center space-x-2 text-gray-500 hover:text-[#2a95ea] transition-colors"
+          class="flex flex-col sm:flex-row items-center space-x-0 sm:space-x-2 text-gray-500 hover:text-[#2a95ea] transition-colors text-xs sm:text-sm text-center"
         >
           <i class="pi pi-github text-base"></i>
           <span>View Source Code and Platform Details</span>

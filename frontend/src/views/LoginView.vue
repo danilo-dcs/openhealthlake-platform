@@ -154,7 +154,9 @@ const loginOnSubmit = async (): Promise<void> => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center relative overflow-hidden px-6">
+  <div
+    class="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6 p-3"
+  >
     <Toast />
     <DynamicDialog />
 
@@ -164,58 +166,68 @@ const loginOnSubmit = async (): Promise<void> => {
     <!-- Background Image -->
     <div
       class="absolute inset-0 bg-cover bg-center opacity-100"
-      :style="{
-        backgroundImage: `url(${backgroundImage})`,
-      }"
+      :style="{ backgroundImage: `url(${backgroundImage})` }"
     ></div>
 
     <!-- Opacity Overlay Layer -->
     <div class="absolute inset-0 bg-white/70"></div>
 
     <!-- Main Container -->
-    <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-      <!-- left : Platform Info -->
-      <div class="space-y-5">
+    <div
+      class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10"
+    >
+      <!-- LEFT : Platform Info -->
+      <div class="space-y-4 sm:space-y-5 text-center lg:text-left">
         <Chip label="Open-source platform" class="bg-primary text-white font-bold border-none" />
 
-        <h2 class="text-4xl font-bold leading-tight">
+        <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
           Secure Health Data Governance
           <br />
-          <span class=""> for Research & Public Health </span>
+          <span>for Research & Public Health</span>
         </h2>
 
-        <p class="max-w-8xl text-lg">
-          OpenHealth Lake provides a secure and scalable environment for managing structured and
-          unstructured health data. It serves as a supplementary tool for data management and can be
-          adapted to various use cases.
-        </p>
+        <div class="hidden lg:block">
+          <p class="text-base sm:text-lg max-w-full lg:max-w-8xl">
+            OpenHealth Lake provides a secure and scalable environment for managing structured and
+            unstructured health data. It serves as a supplementary tool for data management and can
+            be adapted to various use cases.
+          </p>
 
-        <ul class="space-y-3 mt-6">
-          <li v-for="feature in features" :key="feature.label" class="flex items-center">
-            <i :class="feature.icon" class="mr-3 text-primary"></i>
-            {{ feature.label }}
-          </li>
-        </ul>
+          <ul class="space-y-2 sm:space-y-3 mt-4 sm:mt-6">
+            <li
+              v-for="feature in features"
+              :key="feature.label"
+              class="flex items-center justify-center lg:justify-start"
+            >
+              <i :class="feature.icon" class="mr-3 text-primary"></i>
+              {{ feature.label }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- RIGHT SIDE : Login Card -->
       <div class="flex justify-center lg:justify-end">
         <div
-          class="bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-10 w-full max-w-md flex flex-col items-center"
+          class="bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-6 sm:p-8 lg:p-10 w-full max-w-sm sm:max-w-md flex flex-col items-center"
         >
           <!-- Logo -->
-          <div class="text-center mb-8">
+          <div class="text-center mb-6 sm:mb-8">
             <div class="flex items-center justify-center">
-              <img :src="logo" alt="Lakehouse Logo" class="w-10 h-10 mr-2 object-contain" />
-              <h3 class="text-3xl font-bold">OpenHealth</h3>
-              <h3 class="text-3xl font-bold text-primary">Lake</h3>
+              <img
+                :src="logo"
+                alt="Lakehouse Logo"
+                class="w-8 h-8 sm:w-10 sm:h-10 mr-2 object-contain"
+              />
+              <h3 class="text-2xl sm:text-3xl font-bold">OpenHealth</h3>
+              <h3 class="text-2xl sm:text-3xl font-bold text-primary">Lake</h3>
             </div>
 
-            <p class="text-gray-500 text-sm mt-3">Sign in to your workspace</p>
+            <p class="text-gray-500 text-xs sm:text-sm mt-3">Sign in to your workspace</p>
           </div>
 
           <!-- Form -->
-          <div class="w-full space-y-5">
+          <div class="w-full space-y-4 sm:space-y-5">
             <InputGroup>
               <InputGroupAddon>
                 <i class="pi pi-envelope text-primary"></i>
@@ -250,7 +262,7 @@ const loginOnSubmit = async (): Promise<void> => {
               />
             </div>
 
-            <div class="space-y-4 pt-6">
+            <div class="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
               <Button
                 class="w-full bg-primary text-white border-none"
                 @click="loginOnSubmit"
@@ -263,26 +275,36 @@ const loginOnSubmit = async (): Promise<void> => {
                 label="Sign Up"
               />
             </div>
+            <div class="block md:hidden">
+              <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-x-7 sm:gap-y-4">
+                <img :src="inform_logo" alt="Logo" class="h-8 sm:h-16" />
+                <img :src="dsi_logo" alt="Logo" class="h-8 sm:h-15" />
+                <img :src="ceri_logo" alt="Logo" class="h-9 sm:h-20" />
+                <img :src="ita_logo" alt="Logo" class="h-7 sm:h-14" />
+                <img :src="comp2bio_logo" alt="Logo" class="h-3 sm:h-4" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <footer class="absolute bottom-6 w-full text-center text-sm text-gray-600">
-      <div class="flex flex-col items-center space-y-10">
+    <footer
+      class="hidden lg:block absolute bottom-2 sm:bottom-4 w-full text-center text-[10px] sm:text-sm text-gray-600 px-3 sm:px-4 sm:mt-10"
+    >
+      <div class="flex flex-col items-center space-y-4 sm:space-y-10">
         <!-- Powered By -->
         <div>
-          <div class="text-gray-700 mb-4">Powered by:</div>
-          <div class="flex flex-row items-center gap-x-7">
-            <img :src="inform_logo" alt="Logo" class="h-16" />
-            <img :src="dsi_logo" alt="Logo" class="h-15" />
-            <img :src="ceri_logo" alt="Logo" class="h-20" />
-            <img :src="ita_logo" alt="Logo" class="h-14" />
-            <img :src="comp2bio_logo" alt="Logo" class="h-4" />
+          <div class="text-gray-700 mb-2 sm:mb-4 text-xs sm:text-sm">Powered by:</div>
+
+          <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-x-7 sm:gap-y-4">
+            <img :src="inform_logo" alt="Logo" class="h-8 sm:h-16" />
+            <img :src="dsi_logo" alt="Logo" class="h-8 sm:h-15" />
+            <img :src="ceri_logo" alt="Logo" class="h-9 sm:h-20" />
+            <img :src="ita_logo" alt="Logo" class="h-7 sm:h-14" />
+            <img :src="comp2bio_logo" alt="Logo" class="h-3 sm:h-4" />
           </div>
-          <!-- Powered by
-          <span class="font-semibold text-[#2a95ea]"> INFORM Africa Hub </span> -->
         </div>
 
         <!-- GitHub Link -->
@@ -290,10 +312,12 @@ const loginOnSubmit = async (): Promise<void> => {
           href="https://github.com/danilo-dcs/lakehouse-platform"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center space-x-2 text-gray-500 hover:text-[#2a95ea] transition-colors"
+          class="flex flex-col sm:flex-row items-center space-x-0 sm:space-x-2 text-gray-500 hover:text-[#2a95ea] transition-colors text-[10px] sm:text-sm px-2"
         >
-          <i class="pi pi-github text-base"></i>
-          <span>View Source Code and Platform Details</span>
+          <i class="pi pi-github text-sm sm:text-base"></i>
+          <span class="text-center sm:text-left leading-tight">
+            View Source Code and Platform Details
+          </span>
         </a>
       </div>
     </footer>
