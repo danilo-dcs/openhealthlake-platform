@@ -1,0 +1,27 @@
+name: openhealthlake-backend
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - pydantic==2.8.2
+      - fastapi==0.111.0
+      - fastapi-cli
+      - uvicorn==0.30.1
+      - google==3.0.0
+      - google-cloud-storage==2.17.0
+      - requests==2.32.3
+      - hdfs==2.7.3
+      - aiofiles==24.1.0
+      - uuid6==2024.7.10
+      - cryptography==43.0.1
+      - python-jose[cryptography]==3.3.0
+      - passlib>=1.7.4
+      - bcrypt==3.2.2
+      - boto3==1.36.12
+      - httpx==0.28.1
+      - requests-kerberos==0.15.0
+      - resend==2.10.0
+      - python-dotenv==1.0.1
+      - pydantic-settings==2.5.2

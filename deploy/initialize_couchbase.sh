@@ -12,9 +12,9 @@ curl -X POST http://${COUCHBASE_HOST}:8091/clusterInit \
   -d indexPath=/opt/couchbase/var/lib/couchbase/data \
   -d analyticsPath=/opt/couchbase/var/lib/couchbase/data \
   -d eventingPath=/opt/couchbase/var/lib/couchbase/data \
-  -d memoryQuota=2048 \
-  -d indexMemoryQuota=256 \
-  -d queryMemoryQuota=512 \
+  -d memoryQuota=${COUCHBASE_MEMORY_QUOTA} \
+  -d indexMemoryQuota=$((COUCHBASE_MEMORY_QUOTA * 1 / 5)) \
+  -d queryMemoryQuota=$((COUCHBASE_MEMORY_QUOTA * 1 / 5)) \
   -d nodeEncryption=on \
   -d indexerStorageMode=plasma \
   -d port=SAME
@@ -32,7 +32,7 @@ echo "Creating Bucket"
 sleep 15
 curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8091/pools/default/buckets \
   -d name=${COUCHBASE_BUCKET} \
-  -d ramQuotaMB=2048 \
+  -d ramQuotaMB=$((COUCHBASE_MEMORY_QUOTA * 2 / 4)) \
   -d bucketType=couchbase
 
 echo "Creating Scopes"

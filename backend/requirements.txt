@@ -7,13 +7,11 @@ google-cloud-storage==2.17.0
 requests==2.32.3
 hdfs==2.7.3
 aiofiles==24.1.0
-# couchbase==4.3.1
 uuid6==2024.7.10
 cryptography==43.0.1
 python-jose[cryptography]==3.3.0
 passlib>=1.7.4
 bcrypt==3.2.2
-# passlib[bcrypt]==1.7.4
 boto3==1.36.12
 httpx==0.28.1
 requests-kerberos==0.15.0
