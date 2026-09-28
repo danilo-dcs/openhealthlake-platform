@@ -1,9 +1,9 @@
 # This docker-compose file launches a standalone Self Hosted Lakehosue application
 services:
   couchbase:
-    image: lakehouse-couchbase
+    image: couchbase
     hostname: couchbase
-    container_name: couchbase
+    container_name: ohl-couchbase
     ports:
       - 8091:8091 # couchbase admin client
       - 8092:8092 # couchbase query client
@@ -13,53 +13,99 @@ services:
       - 18091:18091 # couchbase admin client https
     restart: always
     environment:
-      COUCHBASE_ADMINISTRATOR_USERNAME: ${COUCHBASE_USER}
-      COUCHBASE_ADMINISTRATOR_PASSWORD: ${COUCHBASE_PASSWORD}
+      COUCHBASE_ADMINISTRATOR_USERNAME: ${ADMIN_USER}
+      COUCHBASE_ADMINISTRATOR_PASSWORD: ${ADMIN_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8091/pools >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
-      - couchbase-network
-      - app-network
+      - ohl-couchbase-network
+      - ohl-app-network
     volumes:
-      - couchbase-data:/opt/couchbase/var
-      - ./couchbase/scripts:/scripts
-    # entrypoint: ['bash', '/scripts/custom_entrypoint.sh']
+      - ohl-couchbase-data:/opt/couchbase/var
 
   minio:
     image: minio/minio:latest
-    container_name: lakehouse-minio
+    container_name: ohl-minio
     ports:
       - '9000:9000'
       - '9001:9001'
     environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
-      MINIO_DOMAIN: ${MINIO_DOMAIN}
-      MINIO_REGION_NAME: ${MINIO_REGION}
+      MINIO_ROOT_USER: ${ADMIN_USER}
+      MINIO_ROOT_PASSWORD: ${ADMIN_PASSWORD}
+      MINIO_DOMAIN: minio
+      MINIO_REGION_NAME: af-south-1
       MINIO_BROWSER: 'on'
     volumes:
       - ./minio-data:/data
       - ./minio-config:/root/.minio
     command: server /data --console-address ":9001"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
-      - minio-network
+      - ohl-minio-network
+
+  initialize-couchbase:
+    image: alpine:3.20
+    container_name: ohl-initialize-couchbase
+    network_mode: service:couchbase
+    depends_on:
+      couchbase:
+        condition: service_healthy
+    environment:
+      COUCHBASE_HOST: ohl-couchbase
+      COUCHBASE_USER: ${COUCHBASE_USER}
+      COUCHBASE_PASSWORD: ${COUCHBASE_PASSWORD}
+      COUCHBASE_BUCKET: ${COUCHBASE_BUCKET}
+    volumes:
+      - ./deploy/initialize_couchbase.sh:/scripts/initialize_couchbase.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["apk add --no-cache curl && exec /bin/sh /scripts/initialize_couchbase.sh"]
+    restart: "no"
+
+  initialize-minio:
+    image: alpine:3.20
+    container_name: initialize-minio
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_HOST: ohl-minio
+      MINIO_PORT: 9000
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASSWORD: ${MINIO_PASSWORD}
+    volumes:
+      - ./deploy/initialize_minio.sh:/scripts/initialize_minio.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["apk add --no-cache minio-client && exec /bin/sh /scripts/initialize_minio.sh"]
+    networks:
+      - ohl-minio-network
+    restart: "no"
 
   passport-broker:
-    container_name: lakehouse-passport-broker
+    container_name: ohl-passport-broker
     image: ga4gh/ga4gh-starter-kit-passport-broker:0.0.2
     ports:
       - 4501:4501
     volumes:
-      # - $HOME/docker_volumes/passport_broker/config:/config
-      - passport_usr_data:/usr
+      - ohl-passport_usr_data:/usr
     networks:
-      - app-network
-      - minio-network
+      - ohl-app-network
+      - ohl-minio-network
 
   backend:
-    container_name: lakehouse-backend
+    container_name: ohl-backend
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.dev
       secrets:
         - cert_ca
     ports:
@@ -67,10 +113,12 @@ services:
     volumes:
       - ./.env:/app/.env
     networks:
-      - app-network
+      - ohl-app-network
     depends_on:
-      - lakehouse-couchbase
-      - lakehouse-passport-broker
+      initialize-couchbase:
+        condition: service_completed_successfully
+      passport-broker:
+        condition: service_started
     environment:
       BACKEND_ENV: ${BACKEND_ENV}              
       EMAIL_SERVICE_KEY: ${EMAIL_SERVICE_KEY}
@@ -85,22 +133,22 @@ services:
       AUTH_ALGORITHM: ${AUTH_ALGORITHM}
       EXPIRATION_TIME_MINUTES: ${EXPIRATION_TIME_MINUTES}     
       FRONTEND_URL: ${FRONTEND_URL}                   
-      DOCUMENTATION_URL: ${DOCUMENTATION_URL}
+      DOCUMENTATION_URL: ${DOCUMENTATION_URL}              
 
   frontend:
     build:
       context: ./frontend/lakehouse-ui/
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.dev
       secrets:
         - cert_ca
-    container_name: lakehouse-frontend
+    container_name: ohl-frontend
     networks:
-      app-network:
+      ohl-app-network:
         aliases:
-          - frontend.daniloapp.com
+          - frontend.pathotrack.health
 
     depends_on:
-      - lakehouse-backend
+      - ohl-backend
     expose:
       - '80'
     ports:
@@ -116,17 +164,17 @@ secrets:
     file: ${CA_CERT_PATH}
 
 networks:
-  app-network:
+  ohl-app-network:
     driver: bridge
-  couchbase-network:
+  ohl-couchbase-network:
     driver: bridge
-  minio-network:
+  ohl-minio-network:
     driver: bridge
 
 volumes:
-  passport_usr_data:
+  ohl-passport_usr_data:
     driver: local
-  couchbase-data:
+  ohl-couchbase-data:
     driver: local
 
   # dremio:
