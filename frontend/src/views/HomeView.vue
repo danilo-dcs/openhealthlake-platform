@@ -58,8 +58,10 @@ const menuItems = ref([
 <template>
   <div class="flex flex-col items-center min-h-screen bg-stone-100">
     <header class="text-center mt-10 mb-15">
-      <h1 class="text-4xl font-bold text-gray-800">Data Lakehouse</h1>
-      <p class="text-gray-600 mt-2 text-lg">Manage, explore, and control your data seamlessly.</p>
+      <h1 class="text-4xl font-bold text-gray-800">OpenHealthLake (OHL)</h1>
+      <p class="text-gray-600 mt-2 text-lg">
+        A data lakehouse to manage, explore, and control your data seamlessly.
+      </p>
     </header>
 
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-[90%] max-w-6xl mb-5">

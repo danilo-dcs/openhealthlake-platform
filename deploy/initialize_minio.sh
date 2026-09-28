@@ -1,14 +1,7 @@
 #!/bin/sh
 
-# Script arguments
-USER="$1"
-PASSWORD="$2"
-
-# Wait for MinIO to be ready
-sleep 20
-
 # Set user credentials for mc
-mc alias set local http://localhost:9000 "$USER" "$PASSWORD"
+mc alias set local "http://$MINIO_HOST:$MINIO_PORT" "$MINIO_USER" "$MINIO_PASSWORD"
 
 # Create buckets
 mc mb local/lakehouse
