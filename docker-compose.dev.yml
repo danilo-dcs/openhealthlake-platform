@@ -59,7 +59,7 @@ services:
     container_name: backend
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - 4000:4000
     volumes:
@@ -73,7 +73,7 @@ services:
   frontend:
     build:
       context: ./frontend/lakehouse-ui/
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: frontend
     networks:
       app-network:
