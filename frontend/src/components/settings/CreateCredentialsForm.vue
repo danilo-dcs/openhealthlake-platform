@@ -93,15 +93,18 @@ const getCredentialTemplateText = (): void => {
 const sendCredential = async () => {
   loading.value = true
 
-  await postCredential()
-
-  toast.add({
-    severity: 'info',
-    summary: 'Submitted',
-    detail: 'Credential Submitted',
-    life: 4000,
-  })
-  loading.value = false
+  await postCredential().then(
+    () => {
+      toast.add({
+        severity: 'info',
+        summary: 'Submitted',
+        detail: 'Credential Submitted',
+        life: 4000,
+      })
+    }
+  ).catch().finally(
+    () => loading.value = false
+  )
 
   dialogRef.value.close({
     updateView: true,
@@ -125,6 +128,8 @@ const postCredential = async (): Promise<void> => {
   }
 
   await apiRequestHandler<any>(url, 'POST', body)
+
+
 }
 </script>
 

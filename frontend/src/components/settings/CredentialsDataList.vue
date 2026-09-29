@@ -65,8 +65,10 @@ const getStorageColor = (item: CredentialItem): string => {
   return item.storage_type === 'gcs'
     ? 'bg-blue-400'
     : item.storage_type === 's3'
-      ? 'bg-red-400'
-      : 'bg-yellow-300'
+      ? 'bg-red-500'
+      : item.storage_type === 'minio' ?
+        'bg-orange-500'
+        : 'bg-yellow-300'
 }
 
 // API REQUESTS
