@@ -37,10 +37,11 @@ Lastly, the application API controls the execution flow of funtionalities, besid
 echo "PASTE_YOUR_LICENSE" > minio.licence
 ```
 
-3. Copy the `.env.example` file in the root directory into a `.env` file.
+3. Copy the `.env.example` file in the `root/` directory into a `.env` file.
 ```shell
 cp .env.example .env
 ```
+
 4. Fill in the `.env` file.
     - `EMAIL_SERVICE_KEY` should contain a generated API key from [Resend mailing service](https://resend.com/api-keys)
     - `COUCHBASE_USER` and `COUCHBASE_PASSWORD` indicate Couchbase's admin credentials.
@@ -49,7 +50,14 @@ cp .env.example .env
     - The encryption keys should be generated with the command `openssl rand -hex 32` and then pasted into the `.env` file. 
     - The `ENCRYPTION_SECRET_KET`, `AUTH_SECRET_KEY`, and `REFRESH_TOKEN_KEY` must have their own dedicated encryption key.
 
-5. Run the command below:
+5. Copy the dedicated `.env.example` file in the `frontend/` directory into a `.env` file.
+```shell
+cp frontend/.env.example frontend/.env
+```
+
+6. Fill in the frontend's `.env` file.
+
+7. Run the command below:
 ```shell
 docker-compose up -d --build
 ```

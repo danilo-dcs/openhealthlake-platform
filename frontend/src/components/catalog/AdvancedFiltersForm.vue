@@ -8,9 +8,10 @@ import Divider from 'primevue/divider'
 import { useCatalogStore } from '@/stores/catalogStore'
 import { useToast } from 'primevue/usetoast'
 import type {
-  CollectionFilter,
-  OperatorKey,
+  CollectionFilter
 } from '@/shared/interfaces/http/CollectionSearchRequest'
+import type { OperatorKey } from '@/shared/interfaces/types'
+
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
 const dialogRef = inject('dialogRef') as Ref<DynamicDialogInstance>
