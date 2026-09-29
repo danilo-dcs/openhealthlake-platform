@@ -1,9 +1,6 @@
-import sources from '@/assets/configs/sources.json'
-import type { SourceConfigs } from '../interfaces/configs/SourceConfigs'
+import type { HttpMethod } from '@/shared/interfaces/types'
 import { unauthorizedRequestHandler } from './unauthorizedRequestHandler'
 import { useUserStore } from '@/stores/userStore'
-
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export async function apiRequestHandler<T>(
   endpoint: string,
@@ -11,9 +8,12 @@ export async function apiRequestHandler<T>(
   body?: any,
   headers?: any,
 ): Promise<T> {
-  const { lakehouse_api_url }: SourceConfigs = sources as SourceConfigs
 
-  const finalUrl = `${lakehouse_api_url}${endpoint}`
+const lakehouseApiUrl = import.meta.env.DEV
+  ? '/api/lakehouse'
+  : import.meta.env.VITE_APP_MAIN_LAKEHOUSE_API_URL
+
+  const finalUrl = `${lakehouseApiUrl}${endpoint}`
 
   const userStore = useUserStore()
 
@@ -35,7 +35,7 @@ export async function apiRequestHandler<T>(
     })
 
     if (response.status === 401) {
-      const refreshed = await unauthorizedRequestHandler(lakehouse_api_url)
+      const refreshed = await unauthorizedRequestHandler(lakehouseApiUrl)
 
       if (refreshed) {
         // Retry request with the new token

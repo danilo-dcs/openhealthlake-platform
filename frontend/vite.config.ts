@@ -18,15 +18,6 @@ export default defineConfig(({ command, mode }) => {
     base: '/',
     plugins: [vue(), vueDevTools()],
 
-    define: {
-      // Expose all VITE_* variables to your app
-      __APP_ENV__: JSON.stringify({
-        mode: env.VITE_MODE,
-        couchbaseUrl: env.VITE_APP_COUCHBASE_URL,
-        lakehouseApiUrl: env.VITE_APP_MAIN_LAKEHOUSE_API_URL,
-      }),
-    },
-
     server: {
       host: true,
       port: 3000,

@@ -17,15 +17,13 @@ import CredeltialsDataList from '@/components/settings/CredentialsDataList.vue'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 import { useSettingsStore, type SettingsStore } from '@/stores/settingsStore'
 
-import sources from '@/assets/configs/sources.json'
-
 const dialog = useDialog()
 
 const dialogRef = ref<DynamicDialogInstance>()
 
 const store = useSettingsStore() as SettingsStore
 
-const couchbaseLink = ref<string>(sources.couchbase_url)
+const couchbaseLink = ref<string>(import.meta.env.VITE_APP_COUCHBASE_URL)
 
 const tabValue = ref('0')
 
