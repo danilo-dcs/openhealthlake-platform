@@ -1,8 +1,7 @@
-# This docker-compose file launches a standalone Self Hosted Lakehosue application
 services:
   couchbase:
     image: couchbase
-    hostname: couchbase
+    hostname: ohl-couchbase.local
     container_name: ohl-couchbase
     ports:
       - 8091:8091 # couchbase admin client
@@ -22,8 +21,12 @@ services:
       retries: 12
       start_period: 30s
     networks:
-      - ohl-couchbase-network
-      - ohl-app-network
+      ohl-couchbase-network:
+        aliases:
+          - ohl-couchbase.local
+      ohl-app-network:
+        aliases:
+          - ohl-couchbase.local
     volumes:
       - ohl-couchbase-data:/opt/couchbase/var
 
@@ -42,7 +45,8 @@ services:
     volumes:
       - ./minio-data:/data
       - ./minio-config:/root/.minio
-    command: server /data --console-address ":9001"
+      - ./minio.licence:/minio.license:ro
+    command: server /data --console-address ":9001" --license /minio.license
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
@@ -61,10 +65,12 @@ services:
       couchbase:
         condition: service_healthy
     environment:
-      COUCHBASE_HOST: ohl-couchbase
+      COUCHBASE_HOST: ${COUCHBASE_HOST}
+      COUCHBASE_NODE_HOSTNAME: ohl-couchbase.local
       COUCHBASE_USER: ${COUCHBASE_USER}
       COUCHBASE_PASSWORD: ${COUCHBASE_PASSWORD}
       COUCHBASE_BUCKET: ${COUCHBASE_BUCKET}
+      COUCHBASE_TOTAL_MEMORY_QUOTA: ${COUCHBASE_TOTAL_MEMORY_QUOTA}
     volumes:
       - ./deploy/initialize_couchbase.sh:/scripts/initialize_couchbase.sh:ro
     entrypoint: ["/bin/sh", "-c"]
@@ -78,7 +84,7 @@ services:
       minio:
         condition: service_healthy
     environment:
-      MINIO_HOST: ohl-minio
+      MINIO_HOST: minio
       MINIO_PORT: 9000
       MINIO_USER: ${MINIO_USER}
       MINIO_PASSWORD: ${MINIO_PASSWORD}
