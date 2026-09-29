@@ -46,7 +46,6 @@ class EncryptedCredentialsPayload(BaseModel):
     visa_uuids: Optional[List[str]] = []
     storage_type: Optional[Storage] = None
     bucket_names: Optional[List[str]] = []
-    # credential: Optional[Union[GoogleCredentialsModel,AmazonCredentialsModel]] = None
     credential: Optional[str]  = None
 
 class CouchbaseCredentialModel(EncryptedCredentialsPayload):

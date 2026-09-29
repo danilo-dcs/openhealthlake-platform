@@ -84,7 +84,7 @@ async def get_credential_by_id(
 
 @router.post(
     path="/create", 
-    summary="Uploads a JSON file containing cloud credentials",
+    summary="Uploads a JSON string object containing cloud credentials",
     response_model=CouchbaseCredentialModel
 )
 async def upload_credentials(

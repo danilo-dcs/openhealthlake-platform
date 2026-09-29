@@ -47,8 +47,15 @@ cp .env.example .env
     - `COUCHBASE_USER` and `COUCHBASE_PASSWORD` indicate Couchbase's admin credentials.
     - `COUCHBASE_HOST` and `COUCHBASE_BUCKET` indicate the location for the new application bucket to be initialized. `COUCHBASE_HOST` value should be `couchbase` for docker lauched environments.
     - `MINIO_USER` and `MINIO_PASSWORD` indicate MinIO's admin credentials.
-    - The encryption keys should be generated with the command `openssl rand -hex 32` and then pasted into the `.env` file. 
-    - The `ENCRYPTION_SECRET_KET`, `AUTH_SECRET_KEY`, and `REFRESH_TOKEN_KEY` must have their own dedicated encryption key.
+    - The JWT secret keys (`AUTH_SECRET_KEY`, and `REFRESH_TOKEN_KEY`) should be generated with the command below and then pasted into the `.env` file:
+        - ```shell
+            openssl rand -hex 32
+        ```
+    - The encryption key (`ENCRYPTION_SECRET_KET`) used for credentials encryption should be created with a Fernet-compatible format:
+        - ```python
+            python -m pip install cryptography
+            python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+        ```
 
 5. Copy the dedicated `.env.example` file in the `frontend/` directory into a `.env` file.
 ```shell
