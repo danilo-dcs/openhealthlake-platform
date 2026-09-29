@@ -7,9 +7,11 @@ Operator = Literal[">","<","=","!=",">=","<=", "%"]
 
 Direction = Literal["ASC", "DESC"]
 
+Any = Union[str, int, list, tuple, dict]
+
 class CouchbaseQueryBuilder:
     """ Query Order
-        query_builder
+        query_builder,
         .select(["name", "age", "school"])
         .where("name", "=" ,"danili")
         .where("age", ">", 34)
@@ -28,7 +30,7 @@ class CouchbaseQueryBuilder:
         self.select_fields = "*"
         self.filters: List[str] = []
         self.limit: Union[int, None] = None
-        self.offset: Union[int, None] = None
+        self.offset_value: Union[int, None] = None
         self.order_by: Union[str, None] = None
     
 
@@ -47,7 +49,7 @@ class CouchbaseQueryBuilder:
             self.select_fields = fields
         return self
 
-    def where(self, field: str, op: Operator, value:any):
+    def where(self, field: str, op: Operator, value: Any):
         """
         Add filtering conditions to the query.
         """
@@ -67,7 +69,7 @@ class CouchbaseQueryBuilder:
             self.filters.append(f"LOWER({field}) LIKE '%'")
         return self
     
-    def where_any(self, target: str, in_filed: str, op: Operator, value:any, satisfies=None):
+    def where_any(self, target: str, in_filed: str, op: Operator, value: Any, satisfies=None):
         """
         Add filtering conditions to the query.
         """
@@ -80,7 +82,7 @@ class CouchbaseQueryBuilder:
             self.filters.append(f"ANY {target} IN {in_filed} SATISFIES {satisfies} {op} {value} END")
         return self
     
-    def where_in(self, target: str, in_values: list[any]):
+    def where_in(self, target: str, in_values: list[Any]):
         """
         Add filtering conditions to the query.
         """
@@ -88,7 +90,7 @@ class CouchbaseQueryBuilder:
 
         return self
     
-    def where_intersect(self, target: str, in_values: list[any]):
+    def where_intersect(self, target: str, in_values: list[Any]):
         """
         Add filtering conditions to the query.
         """
@@ -107,7 +109,7 @@ class CouchbaseQueryBuilder:
         """
         Set an offset number.
         """
-        self.offset = skip
+        self.offset_value = skip
         return self
 
     def order_by_field(self, field: str, direction: Direction = "ASC"):
@@ -132,8 +134,8 @@ class CouchbaseQueryBuilder:
         if self.limit:
             query += f" LIMIT {self.limit}"
 
-        if self.offset:
-            query += f" {self.offset}"
+        if self.offset_value:
+            query += f" {self.offset_value}"
         
         return query
     

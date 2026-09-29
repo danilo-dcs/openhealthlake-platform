@@ -41,10 +41,10 @@ class CatalogCollectionBaseModel(BaseModel):
 
 
 class CouchbaseCatalogFileModel(CatalogFileBaseModel):
-    id: str = None
+    id: Optional[str] = None
 
 class CouchbaseCatalogCollectionModel(CatalogCollectionBaseModel):
-    id: str = None
+    id: Optional[str] = None
 
 class CatalogFilter(BaseModel):
     property_name: str

@@ -27,6 +27,7 @@ class TokenResponse(BaseModel):
 class UserTokenResponse(TokenResponse):
     user_id: str
     user_role: Optional[str] = None
+    user_email: Optional[str] = None
 
 class AuthenticationHeader(BaseModel):
     Authorization: str

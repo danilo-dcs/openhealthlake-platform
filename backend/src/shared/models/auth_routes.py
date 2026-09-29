@@ -20,25 +20,6 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
-# @router.post("/login", response_model=UserTokenResponse, 
-#     summary="For API purposes", 
-#     description="It returns the authorization token to be used by API's. To be able to use the remaining endpoints from this API, the {'Authorization': 'Bearer Token'} must be included in every request header"
-# )
-# async def login(payload: GetTokenPayload) -> UserTokenResponse:
-#     authServices = AuthServices()
-#     tokens = await authServices.authenticate(email=payload.email, password=payload.password)  
-
-#     if not tokens:
-#         return HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Unable to validate user credentials"
-#         )
-    
-#     (auth_token, refresh_token) = tuple(tokens)
-
-#     decoded_token = authServices.decode_jwt_token(auth_token)
-
-#     return UserTokenResponse(access_token=auth_token, token_type="Bearer", user_id=decoded_token.user_id, user_role=decoded_token.user_role, refresh_token=refresh_token)
 
 @router.post("/login", response_model=UserTokenResponse)
 async def login(payload: GetTokenPayload, response: Response):
@@ -65,26 +46,6 @@ async def login(payload: GetTokenPayload, response: Response):
         user_email=decoded_token.user_email
     )
 
-# @router.post("/refresh", response_model=UserTokenResponse, 
-#     summary="For API purposes", 
-#     description="It returns the authorization token to be used by API's. To be able to use the remaining endpoints from this API, the {'Authorization': 'Bearer Token'} must be included in every request header"
-# )
-# async def refresh(payload: handlers) -> UserTokenResponse:
-#     authServices = AuthServices()
-
-#     decoded_token = authServices.decode_jwt_token(payload.refresh_token, refresh=True)
-
-#     timeHandler = TimeHandler()
-
-#     if timeHandler.is_expired(decoded_token.exp):
-#         return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired. Please login again")
-
-#     token_data = decoded_token.model_dump(exclude=["exp", "sub"])
-
-#     auth_token = await authServices.refresh(token_data=TokenData(**token_data))
-
-#     return UserTokenResponse(access_token=auth_token, token_type="Bearer", user_id=decoded_token.user_id, user_role=decoded_token.role, refresh_token=payload.refresh_token)
-
 @router.post("/refresh", response_model=UserTokenResponse)
 async def refresh(request: Request, response: Response):
     authServices = AuthServices()
@@ -98,7 +59,7 @@ async def refresh(request: Request, response: Response):
 
     decoded_token = authServices.decode_jwt_token(refresh_token, refresh=True)
 
-    if timeHandler.is_expired(decoded_token.exp):
+    if timeHandler.is_expired(str(decoded_token.exp)):
         raise HTTPException(status_code=401, detail="Refresh token expired")
 
     token_data = decoded_token.model_dump(exclude=["exp", "sub"])
