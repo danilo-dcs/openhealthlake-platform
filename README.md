@@ -51,7 +51,7 @@ cp .env.example .env
         - ```shell
             openssl rand -hex 32
         ```
-    - The encryption key (`ENCRYPTION_SECRET_KET`) used for credentials encryption should be created with a Fernet-compatible format:
+    - The encryption key (`ENCRYPTION_SECRET_KEY`) used for credentials encryption should be created with a Fernet-compatible format:
         - ```python
             python -m pip install cryptography
             python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"

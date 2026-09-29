@@ -7,7 +7,7 @@ class EncryptionHandler:
 
     def __init__(self) -> None:
         settings = EnvSettings()
-        self.secret_key = settings.ENCRYPTION_SECRET_KET
+        self.secret_key = str(settings.ENCRYPTION_SECRET_KEY)
 
     def generate_secret_key(self) -> str:
         """

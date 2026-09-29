@@ -20,11 +20,11 @@ class CredentialsHandler:
         if not self.filesHandler.check_dir(credentials_path): 
             os.makedirs(credentials_path)
 
-        credentials_path = os.path.join(credentials_path, credentials.filename)
+        credentials_path = os.path.join(str(credentials_path), str(credentials.filename))
 
         await self.filesHandler.save(credentials_path, credentials.file)
 
-        return credentials.filename
+        return str(credentials.filename)
 
     def is_valid(self, user_id: str, storage_type: str, credential_name: str) -> bool:
         """Check if a given credentials json exists"""
@@ -43,7 +43,7 @@ class CredentialsHandler:
         path = os.path.join(self.base_path, user_id, storage_type)
 
         if not self.filesHandler.check_dir(path):
-            return None
+            return []
 
         all_entries = os.listdir(path)
 
