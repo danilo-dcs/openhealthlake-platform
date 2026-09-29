@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 import boto3
 from google.cloud import storage
 # from hdfs import InsecureClient
+from minio import Minio
 
 from fastapi import HTTPException, status
 import requests
@@ -12,7 +15,7 @@ from services.CatalogServices import CatalogServices
 from services.CredentialServices import CredentialServices
 from shared.functions.regex import get_ip_address
 from shared.models.catalog import CatalogFileBaseModel, CatalogFilter
-from shared.models.credentials import AmazonCredentialsModel, CouchbaseCredentialModel
+from shared.models.credentials import AmazonCredentialsModel, CouchbaseCredentialModel, MinioCredentialsModel
 from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UploadFileRequestPayload, UploadFileRequestResponse
 from shared.handlers.TimeHandler import TimeHandler
 
@@ -166,6 +169,23 @@ class FileServices:
 
             storage_client.close()
 
+        elif collection_record.storage_type == "minio":
+
+            credential = MinioCredentialsModel(**decoded_credential)
+
+            client = Minio(
+                credential.url,
+                access_key=credential.accessKey,
+                secret_key=credential.secretKey,
+                secure=True,  # False for plain HTTP
+            )
+
+            upload_url = client.presigned_put_object(
+                bucket_name=collection_record.location,
+                object_name=blob_name,
+                expires=timedelta(minutes=30),
+            )
+
         elif collection_record.storage_type == 'hdfs':
 
             overwrite = False
@@ -290,6 +310,23 @@ class FileServices:
                 Params={'Bucket': catalog_record.file_location, 'Key': blob_name},
                 ExpiresIn=expire_time
             )
+
+        elif catalog_record.storage_type == 'minio':
+            credential = MinioCredentialsModel(**decoded_credential)
+            
+            client = Minio(
+                credential.url,
+                access_key=credential.accessKey,
+                secret_key=credential.secretKey,
+                secure=True,  # False for plain HTTP
+            )
+
+            download_url = client.presigned_get_object(
+                bucket_name=catalog_record.file_location,
+                object_name=blob_name,
+                expires=timedelta(minutes=30),
+            )
+
 
         elif catalog_record.storage_type == 'hdfs':
             download_url=f"{catalog_record.file_location}/webhdfs/v1/{blob_name}?op=OPEN"

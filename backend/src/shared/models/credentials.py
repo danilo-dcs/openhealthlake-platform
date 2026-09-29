@@ -16,6 +16,13 @@ class GoogleCredentialsModel(BaseModel):
     client_x509_cert_url: Optional[str] = None
     universe_domain: Optional[str] = None
 
+class MinioCredentialsModel(BaseModel):
+    url: Optional[str] = None
+    accessKey: Optional[str] = None
+    secretKey: Optional[str] = None
+    api: Optional[str] = None
+    path: Optional[str] = None
+
 class AmazonCredentialsModel(BaseModel):
     access_key: Optional[str] = None
     secret_access_key: Optional[str] = None
@@ -30,7 +37,7 @@ class CreateCredentialsPayload(BaseModel):
     visa_uuids: Optional[List[str]] = None
     bucket_names: List[str]
     storage_type: Storage
-    credential: Union[GoogleCredentialsModel, AmazonCredentialsModel, HadoopCredentialsModel]
+    credential: Union[GoogleCredentialsModel, AmazonCredentialsModel, HadoopCredentialsModel, MinioCredentialsModel]
 
 class DeleteCredentialResponse(BaseModel):
     deleted_credential_id: str

@@ -6,7 +6,7 @@ from shared.models.catalog import CouchbaseCatalogCollectionModel
 from shared.models.visas import VisaModel
 
 
-Storage = Literal['gcs', 's3', 'hdfs']
+Storage = Literal['gcs', 's3', 'hdfs', 'minio']
 Collections = Literal['files', 'collections']
 FileCategory = Literal["structured", "unstructured"]
 FileProcessingLevel = Literal["raw", "processed", "curated"]
