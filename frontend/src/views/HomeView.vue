@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import Card from 'primevue/card'
 import Button from 'primevue/button'
 import { RouterLink } from 'vue-router'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { useUserStore } from '@/stores/userStore'
 
