@@ -1,4 +1,4 @@
-export type StorageType = 'gcs' | 's3' | 'hdfs'
+import type { StorageType } from "@/shared/interfaces/types"
 
 export interface GoogleCredential {
   type: string
@@ -20,6 +20,14 @@ export interface S3Credential {
   region: string
 }
 
+export interface MinioCredential {
+  url: string
+  accessKey: string
+  secretKey: string
+  api: string
+  path: string
+}
+
 export interface HdfsCredential {
   user: string
   password: string
@@ -29,5 +37,5 @@ export interface CreateCredentialpayload {
   visa_uuids: string[]
   bucket_names: string[]
   storage_type: StorageType
-  credential: GoogleCredential | S3Credential | HdfsCredential
+  credential: GoogleCredential | S3Credential | HdfsCredential | MinioCredential
 }

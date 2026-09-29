@@ -3,7 +3,7 @@ import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import inform_logo from '@/assets/img/inform_logo.png'
 import dsi_logo from '@/assets/img/dsi_logo.png'

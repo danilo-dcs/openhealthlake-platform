@@ -2,6 +2,8 @@ export type FileCategory = 'structured' | 'unstructured'
 export type ProcessingLevel = 'raw' | 'processed' | 'curated'
 export type Status = 'requested' | 'granted' | 'revoked'
 export type StorageType = 'gcs' | 's3' | 'hdfs' | 'minio'
+export const StorageOptions = ['gcs', 's3', 'hdfs', 'minio']
+
 export type OperatorKey = 'equals' | 'not equals' | 'contains' | 'greater than' | 'lower than'
 
 export type PropertyName =
@@ -17,3 +19,4 @@ export type PropertyName =
 
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+

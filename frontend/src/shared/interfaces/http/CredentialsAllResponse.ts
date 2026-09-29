@@ -1,4 +1,5 @@
-type StorageType = 'gcs' | 's3' | 'hdfs'
+import type { StorageType } from "../types"
+
 
 export interface CredentialItem {
   visa_uuids: string[]

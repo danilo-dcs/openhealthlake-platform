@@ -1,4 +1,4 @@
-type Status = 'requested' | 'granted' | 'revoked'
+import type { Status } from "@/shared/interfaces/types"
 
 export interface AccessRequestSearchPayload {
   collection_id?: string

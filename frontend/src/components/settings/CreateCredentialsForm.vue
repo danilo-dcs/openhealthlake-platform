@@ -16,12 +16,15 @@ import type {
   GoogleCredential,
   HdfsCredential,
   S3Credential,
-  StorageType,
+  MinioCredential
 } from '@/shared/interfaces/http/CreateCredentialPayload'
+import { StorageOptions, type StorageType } from '@/shared/interfaces/types'
+
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
+
 
 const userStore = useUserStore()
 
@@ -30,7 +33,7 @@ const dialogRef = inject('dialogRef') as Ref<DynamicDialogInstance>
 const toast = useToast()
 const router = useRouter()
 
-const credentialOptions = ref<string[]>(['gcs', 's3', 'hdfs'])
+const credentialOptions = ref<string[]>(StorageOptions)
 
 const formValues = ref({
   storage_type: '',
@@ -71,6 +74,14 @@ const getCredentialTemplateText = (): void => {
       "secret_access_key": "string",
       "region": "string"
     }`
+  } else if (formValues.value.storage_type === 'minio') {
+    formPlaceHolder.value = `{
+      "url": "string"
+      "accessKey": "string"
+      "secretKey": "string"
+      "api": "string"
+      "path": "string"
+      }`
   } else {
     formPlaceHolder.value = `{
       "user": "string",
@@ -109,7 +120,8 @@ const postCredential = async (): Promise<void> => {
     credential: JSON.parse(formValues.value.credential) as
       | GoogleCredential
       | S3Credential
-      | HdfsCredential,
+      | HdfsCredential
+      | MinioCredential
   }
 
   await apiRequestHandler<any>(url, 'POST', body)

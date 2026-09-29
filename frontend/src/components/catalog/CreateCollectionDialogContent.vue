@@ -2,7 +2,6 @@
 
 <script setup lang="ts">
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import Divider from 'primevue/divider'
 import InputText from 'primevue/inputtext'
 import RadioButton from 'primevue/radiobutton'
@@ -12,13 +11,14 @@ import { Toast } from 'primevue'
 
 import { useToast } from 'primevue/usetoast'
 import type { CreateCollectionPayload } from '@/shared/interfaces/http/CreateCollectionPayload'
-import { onMounted, ref, inject, type Ref, computed } from 'vue'
+import { onMounted, ref, inject, type Ref } from 'vue'
 import type { GetBucketListResponse } from '@/shared/interfaces/http/GetBucketListResponse'
 
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
+import { StorageOptions } from '@/shared/interfaces/types'
 
 const userStore = useUserStore()
 
@@ -40,7 +40,7 @@ const createCollectionLoadingBtn = ref<boolean>(false)
 
 const submitted = ref<boolean>(false)
 
-const storageTypes = ref<string[]>(['gcs', 's3', 'hdfs'])
+const storageTypes = ref<string[]>(StorageOptions)
 
 const bucketList = ref<GetBucketListResponse>()
 
