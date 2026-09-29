@@ -2,6 +2,15 @@
 
 set -eu
 
+echo "Checking whether bucket '${COUCHBASE_BUCKET}' is already initialized"
+if curl --fail --silent \
+  --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" \
+  "http://${COUCHBASE_HOST}:8091/pools/default/buckets" \
+  >/dev/null; then
+  echo "Bucket '${COUCHBASE_BUCKET}' already exists; skipping Couchbase initialization"
+  exit 0
+fi
+
 echo "Creating Cluster"
 
 curl --fail -X POST http://${COUCHBASE_HOST}:8091/clusterInit \
@@ -92,3 +101,6 @@ curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}
 
 curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8093/query/service \
   -d 'statement=CREATE PRIMARY INDEX ON `lakehouse`.`users`.`access_requests`'
+
+
+exit 0

@@ -16,7 +16,7 @@ services:
       COUCHBASE_ADMINISTRATOR_USERNAME: ${COUCHBASE_USER}
       COUCHBASE_ADMINISTRATOR_PASSWORD: ${COUCHBASE_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8091/pools >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl --fail --silent http://${COUCHBASE_HOST}:8091/ui/index.html >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
