@@ -76,4 +76,4 @@ async def delete_visa_by_id(visa_uuid: str, _: str = Depends(auth_oauth2_scheme)
 
     response = await visaServices.delete_visa(visa_uuid=visa_uuid)
 
-    return response
+    return JSONResponse(content=f"Item deleted!\nDetails:  {str(response)}", status_code=200)

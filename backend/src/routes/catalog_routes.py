@@ -17,7 +17,7 @@ async def get_files_catalog(
     request: Request,
     page_number: str = Query(None),
     _: str = Depends(auth_oauth2_scheme)
-) -> GetFilesCatalogResponse:
+) -> GetFilesCatalogResponse | HTTPException:
     try:
         user_id = request.state.user if request.state.user else None
 
@@ -41,9 +41,9 @@ async def get_collections_catalog(
     request: Request,
     page_number: str = Query(None),
     _: str = Depends(auth_oauth2_scheme)
-) -> GetCollectionsCatalogResponse:
+) -> GetCollectionsCatalogResponse | HTTPException:
     try:
-        user_id = request.state.user if request.state.user else None
+        user_id = request.state.user if request.state.user else ""
 
         page = 1 if not page_number else int(page_number)
 
@@ -73,7 +73,7 @@ async def get_catalog_file_record_by_id(
 
     response = await catalogServices.get_by_id(document_id=record_uuid, user_id=user_id, collection_name="files")
 
-    return response
+    return response 
 
 @router.get(
     path="/collection/id/{record_uuid}", 
@@ -107,7 +107,7 @@ async def get_file_catalog_by_filters(
     request: Request,
     payload: CatalogFilterPayload, 
     _: str = Depends(auth_oauth2_scheme)
-) -> GetFilesCatalogResponse:
+) -> GetFilesCatalogResponse | HTTPException:
     try:
         user_id = request.state.user if request.state.user else None
 
@@ -138,7 +138,7 @@ async def get_collection_catalog_by_filters(
     payload: CatalogFilterPayload, 
     request: Request, 
     _: str = Depends(auth_oauth2_scheme)
-) -> GetCollectionsCatalogResponse:
+) -> GetCollectionsCatalogResponse | HTTPException:
     try:
         user_id = request.state.user if request.state.user else None
         catalogServices = CatalogServices()
@@ -157,7 +157,7 @@ async def set_file_status(
     payload: SetRecordStatusPayload, 
     record_uuid: str, 
     _: str = Depends(auth_oauth2_scheme),
-) -> CouchbaseCatalogFileModel:
+) -> CouchbaseCatalogFileModel | HTTPException:
     try:
         catalogServices = CatalogServices()
         response = await catalogServices.set_record_status(document_id=record_uuid, new_status=payload.status, collection_name="files")
