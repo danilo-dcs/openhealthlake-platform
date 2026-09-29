@@ -226,7 +226,7 @@ const loginOnSubmit = async (): Promise<void> => {
           </div>
 
           <!-- Form -->
-          <div class="w-full space-y-4 sm:space-y-5">
+          <form class="w-full space-y-4 sm:space-y-5" @submit.prevent="loginOnSubmit">
             <InputGroup>
               <InputGroupAddon>
                 <i class="pi pi-envelope text-primary"></i>
@@ -264,7 +264,7 @@ const loginOnSubmit = async (): Promise<void> => {
             <div class="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
               <Button
                 class="w-full bg-primary text-white border-none"
-                @click="loginOnSubmit"
+                type="submit"
                 label="Login"
               />
 
@@ -283,7 +283,7 @@ const loginOnSubmit = async (): Promise<void> => {
                 <img :src="comp2bio_logo" alt="Logo" class="h-3 sm:h-4" />
               </div>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
