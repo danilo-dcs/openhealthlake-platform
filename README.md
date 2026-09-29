@@ -24,33 +24,32 @@ Lastly, the application API controls the execution flow of funtionalities, besid
 
 - [Lakehouse API Code](./backend/)
 - [Lakehouse Web Interface Code](./frontend/)
-- [Couchbase Set Up Codes](./couchbase/)
-- [Hadoop Set Up Codes](./hadoop/)
+- [Initializing scripts for standalone deploy](./deploy/)
 
 
-## Docker Set Up Steps
 
-Create the docker_volumes folder, under the $HOME dir:
+## Lauching a Standalone Platform
 
-```
-mkdir $HOME/docker_volumes
-```
+1. Navigate to [MinIO AIStor website](https://www.min.io/download), and request the free licence.
 
-Setting user permissions to the volume's folder:
-
-```
-sudo chown -R $USER:$USER $HOME/docker_volumes && sudo chmod -R 755 $HOME/docker_volumes
+2. Crewte a new `minio.licence` file in this repository's root directory `./`, copy and paste the license into this file.
+```shell
+echo "PASTE_YOUR_LICENSE" > minio.licence
 ```
 
-Make sure to install NGINX following the set up steps specified on the [nginx folder](./nginx/README.md)
-
-## Lauching as Standalone Platform
-
-1. Make sure to create the `.env` file in the root directory, following the `.env.example` file (also in the root directiory).
-
-This file contains important variables for the backend api and the frontend applications.
-
-2. Run the command below:
+3. Copy the `.env.example` file in the root directory into a `.env` file.
+```shell
+cp .env.example .env
 ```
+4. Fill in the `.env` file.
+    - `EMAIL_SERVICE_KEY` should contain a generated API key from [Resend mailing service](https://resend.com/api-keys)
+    - `COUCHBASE_USER` and `COUCHBASE_PASSWORD` indicate Couchbase's admin credentials.
+    - `COUCHBASE_HOST` and `COUCHBASE_BUCKET` indicate the location for the new application bucket to be initialized. `COUCHBASE_HOST` value should be `couchbase` for docker lauched environments.
+    - `MINIO_USER` and `MINIO_PASSWORD` indicate MinIO's admin credentials.
+    - The encryption keys should be generated with the command `openssl rand -hex 32` and then pasted into the `.env` file. 
+    - The `ENCRYPTION_SECRET_KET`, `AUTH_SECRET_KEY`, and `REFRESH_TOKEN_KEY` must have their own dedicated encryption key.
+
+5. Run the command below:
+```shell
 docker-compose up -d --build
 ```

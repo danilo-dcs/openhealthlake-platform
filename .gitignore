@@ -7,3 +7,5 @@ venv
 .venv
 *venv
 *.license
+*.licence
+minio-data

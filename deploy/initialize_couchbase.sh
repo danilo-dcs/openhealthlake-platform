@@ -1,10 +1,12 @@
 # CREATING CLUSTER
 
+set -eu
+
 echo "Creating Cluster"
 
-curl -X POST http://${COUCHBASE_HOST}:8091/clusterInit \
+curl --fail -X POST http://${COUCHBASE_HOST}:8091/clusterInit \
   -d clusterName=OpenHealthLakeCluster \
-  -d hostname=${COUCHBASE_HOST} \
+  -d hostname=${COUCHBASE_NODE_HOSTNAME} \
   -d username=${COUCHBASE_USER} \
   -d password=${COUCHBASE_PASSWORD} \
   -d services=kv,index,n1ql,backup \
@@ -12,9 +14,9 @@ curl -X POST http://${COUCHBASE_HOST}:8091/clusterInit \
   -d indexPath=/opt/couchbase/var/lib/couchbase/data \
   -d analyticsPath=/opt/couchbase/var/lib/couchbase/data \
   -d eventingPath=/opt/couchbase/var/lib/couchbase/data \
-  -d memoryQuota=${COUCHBASE_MEMORY_QUOTA} \
-  -d indexMemoryQuota=$((COUCHBASE_MEMORY_QUOTA * 1 / 5)) \
-  -d queryMemoryQuota=$((COUCHBASE_MEMORY_QUOTA * 1 / 5)) \
+  -d memoryQuota=${COUCHBASE_TOTAL_MEMORY_QUOTA} \
+  -d indexMemoryQuota=$((COUCHBASE_TOTAL_MEMORY_QUOTA * 1 / 4)) \
+  -d queryMemoryQuota=$((COUCHBASE_TOTAL_MEMORY_QUOTA * 1 / 4)) \
   -d nodeEncryption=on \
   -d indexerStorageMode=plasma \
   -d port=SAME
@@ -32,7 +34,7 @@ echo "Creating Bucket"
 sleep 15
 curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8091/pools/default/buckets \
   -d name=${COUCHBASE_BUCKET} \
-  -d ramQuotaMB=$((COUCHBASE_MEMORY_QUOTA * 2 / 4)) \
+  -d ramQuotaMB=$((COUCHBASE_TOTAL_MEMORY_QUOTA * 3 / 4)) \
   -d bucketType=couchbase
 
 echo "Creating Scopes"
