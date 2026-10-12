@@ -1,6 +1,7 @@
 import type { HttpMethod } from '@/shared/interfaces/types'
 import { unauthorizedRequestHandler } from './unauthorizedRequestHandler'
 import { useUserStore } from '@/stores/userStore'
+import router from '@/router'
 
 export async function apiRequestHandler<T>(
   endpoint: string,
@@ -50,6 +51,8 @@ const lakehouseApiUrl = import.meta.env.DEV
           body: body ? JSON.stringify(body) : undefined,
           credentials: 'include',
         })
+      } else {
+        await router.push('/login')
       }
     }
 

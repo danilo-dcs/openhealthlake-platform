@@ -27,6 +27,12 @@ Lastly, the application API controls the execution flow of funtionalities, besid
 - [Initializing scripts for standalone deploy](./deploy/)
 
 
+## Setup Requirements
+
+- Docker
+- Python
+- NodeJs
+
 
 ## Lauching a Standalone Platform
 

@@ -125,11 +125,10 @@ const loginOnSubmit = async (): Promise<void> => {
     const responseData = await apiRequestHandler<LoginResponse>(url, 'POST', body)
 
     userStore.setUser({
-      email: formValues.value.email,
+      email: responseData.user_email,
       role: responseData.user_role,
       userId: responseData.user_id,
       accessToken: responseData.access_token,
-      refreshToken: responseData.refresh_token,
       tokenType: responseData.token_type,
     })
 

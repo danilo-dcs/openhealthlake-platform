@@ -6,7 +6,6 @@ export const useUserStore = defineStore('user', () => {
   const role = ref<string | null>(null)
   const userId = ref<string | null>(null)
   const accessToken = ref<string | null>(null)
-  const refreshToken = ref<string | null>(null)
   const tokenType = ref<string | null>(null)
 
   const setUser = (data: {
@@ -14,14 +13,12 @@ export const useUserStore = defineStore('user', () => {
     role: string
     userId: string
     accessToken: string
-    refreshToken: string
     tokenType: string
   }) => {
     email.value = data.email
     role.value = data.role
     userId.value = data.userId
     accessToken.value = data.accessToken
-    refreshToken.value = data.refreshToken
     tokenType.value = data.tokenType
   }
 
@@ -38,7 +35,6 @@ export const useUserStore = defineStore('user', () => {
     role.value = ''
     userId.value = ''
     accessToken.value = null
-    refreshToken.value = null
     tokenType.value = ''
   }
 
@@ -50,7 +46,6 @@ export const useUserStore = defineStore('user', () => {
     role,
     userId,
     accessToken,
-    refreshToken,
     tokenType,
     setUser,
     setEmail,

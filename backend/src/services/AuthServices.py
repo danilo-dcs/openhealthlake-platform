@@ -128,12 +128,17 @@ class AuthServices:
             key="refresh_token",
             value=token,
             httponly=True,
-            secure = False if self.env_settings.BACKEND_ENV == "dev" else True,
-            samesite="Lax" if self.env_settings.BACKEND_ENV == "dev" else "None",
+            secure=self.env_settings.BACKEND_ENV == "prod",
+            samesite="lax",
             max_age=7 * 24 * 3600, 
             path="/",
-            domain=".pathotrack.health"
         )
 
     def clear_refresh_cookie(self, response: Response):
-        response.delete_cookie(key="refresh_token", path="/")
+        response.delete_cookie(
+            key="refresh_token",
+            path="/",
+            httponly=True,
+            secure=self.env_settings.BACKEND_ENV == "prod",
+            samesite="lax",
+        )
