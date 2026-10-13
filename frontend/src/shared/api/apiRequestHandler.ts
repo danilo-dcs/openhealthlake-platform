@@ -51,6 +51,11 @@ const lakehouseApiUrl = import.meta.env.DEV
           body: body ? JSON.stringify(body) : undefined,
           credentials: 'include',
         })
+
+        if (response.status === 401) {
+          await router.push('/login')
+        }
+
       } else {
         await router.push('/login')
       }
