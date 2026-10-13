@@ -8,7 +8,7 @@ from shared.models.users import AssertUserVisasPayload, CouchbaseUserAssertionMo
 from routes.auth_routes import auth_oauth2_scheme
 
 
-router = APIRouter(prefix="/user", tags=["Passport Users"])
+router = APIRouter(prefix="/user", tags=["User Passports"])
 
 
 @router.get(
