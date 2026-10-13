@@ -73,7 +73,7 @@ const deleteAction = async () => {
 
 const deleteCollectionRequest = (): Promise<void> => {
   return apiRequestHandler<void>(
-    `/collections/delete/${collectionRef.value?.id}`,
+    `/catalog/collections/delete/${collectionRef.value?.id}`,
     'DELETE'
   )
 }
