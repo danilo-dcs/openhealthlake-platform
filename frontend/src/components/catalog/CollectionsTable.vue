@@ -28,6 +28,7 @@ import RequestAccessContent from './RequestAccessContent.vue'
 // import UploadFileContent from './UploadFileContent.vue'
 import InfoContent from './CollectionInfoContent.vue'
 import ControlAccessContent from './ControlAccessContent.vue'
+import DeleteCollectionContent from './DeleteCollectionContent.vue'
 
 import type {
   CatalogCollectionRecord,
@@ -274,6 +275,28 @@ const openAccessControlDialog = (data: CatalogCollectionRecord) => {
 
   const dialogRef = dialog.open(ControlAccessContent, dialogSpecs)
   // const dialogRef = dialog.open(AccessControlDialogContent, dialogSpecs)
+}
+
+const openDeleteCollectionDialog = (data: CatalogCollectionRecord) => {
+  const dialogSpecs = {
+    props: {
+      ...dialogDefaultProps,
+      header: 'Delete Collection',
+      style: {
+        width: '50vw',
+      },
+    },
+    templates: {},
+    data: data,
+    onClose: async (result: { data?: { refresh?: boolean } }) => {
+      if (result.data?.refresh) {
+        await updateComponentData()
+        await nextTick()
+      }
+    },
+  }
+
+  const dialogRef = dialog.open(DeleteCollectionContent, dialogSpecs)
 }
 
 // const openUploadFileDialog = (data: CatalogCollectionRecord) => {
@@ -529,6 +552,16 @@ const fetchUserCollectionCatalog = async () => {
               size="small"
               rounded
               v-tooltip.bottom="'Access Control'"
+            />
+            <Button
+              v-if="user_id && data.inserted_by.includes(user_id)"
+              id="grant-access-btn"
+              icon="pi pi-trash"
+              @click="openDeleteCollectionDialog(data)"
+              severity="secondary"
+              size="small"
+              rounded
+              v-tooltip.bottom="'Delete Collection'"
             />
             <!-- <Button
               v-if="['owner', 'open'].includes(getAccessStatus(data))"
