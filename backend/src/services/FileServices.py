@@ -15,7 +15,7 @@ from services.CatalogServices import CatalogServices
 from services.CredentialServices import CredentialServices
 from shared.functions.regex import get_ip_address
 from shared.models.catalog import CatalogFileBaseModel, CatalogFilter
-from shared.models.credentials import AmazonCredentialsModel, CouchbaseCredentialModel, MinioCredentialsModel
+from shared.models.credentials import AmazonCredentialsModel, CouchbaseCredentialModel, GoogleCredentialsModel, MinioCredentialsModel
 from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UploadFileRequestPayload, UploadFileRequestResponse
 from shared.handlers.TimeHandler import TimeHandler
 
@@ -29,7 +29,17 @@ class FileServices:
 
         credentials = await credentialServices.list_all_cloud(collection_name="cloud")
 
-        response_list = [ item for item in credentials if storage_type == item.storage_type and bucket_name in item.bucket_names ]
+        response_list = [
+            item
+            for item in credentials
+            if storage_type == item.storage_type and bucket_name in item.bucket_names
+        ]
+
+        if not response_list:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No {storage_type} credentials are configured for bucket {bucket_name}",
+            )
 
         return response_list[0]
 
@@ -58,13 +68,10 @@ class FileServices:
                 detail=f"Collection catalog id {payload.collection_catalog_id} was not found"
             )
         
-        credential = await self.__get_credential_by_storage_bucket(storage_type=collection_record.storage_type, bucket_name=collection_record.location)
-
-        if not credential:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail=f"Missing credentials to operate in the following bucket enviroment {collection_record.location}"
-            )
+        credential = await self.__get_credential_by_storage_bucket(
+            storage_type=collection_record.storage_type,
+            bucket_name=collection_record.location,
+        )
         
         #checking for redundant file
         filters = [
@@ -137,7 +144,17 @@ class FileServices:
         expiry_in = 30 * 60
 
         if collection_record.storage_type == "gcs":
+
+            credential = GoogleCredentialsModel(**decoded_credential)
+
+            if not credential.project_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Invalid AWS credential"
+                )
+ 
             storage_client = storage.Client.from_service_account_info(info=decoded_credential)
+
             bucket = storage_client.bucket(collection_record.location)
             blob = bucket.blob(blob_name)
 
@@ -152,7 +169,13 @@ class FileServices:
 
         elif collection_record.storage_type == "s3":
 
-            credential = AmazonCredentialsModel(**decoded_credential)
+            credential = GoogleCredentialsModel(**decoded_credential)
+
+            if not credential.project_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Invalid Google Cloud credential"
+                )
 
             storage_client = boto3.client(
                 "s3",
@@ -173,8 +196,14 @@ class FileServices:
 
             credential = MinioCredentialsModel(**decoded_credential)
 
+            if not credential.url:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Invalid MinIO credential"
+                )
+
             client = Minio(
-                credential.url,
+                endpoint=str(credential.url),
                 access_key=credential.accessKey,
                 secret_key=credential.secretKey,
                 secure=True,  # False for plain HTTP

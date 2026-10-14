@@ -23,6 +23,8 @@ import type {
 } from '@/shared/interfaces/http/CatalogFileResponse'
 import moment from 'moment'
 import FileInfoContent from '@/components/catalog/FileInfoContent.vue'
+import DeleteFileContent from '@/components/catalog/DeleteFileContent.vue'
+
 import type { DownloadFilePayload } from '@/shared/interfaces/http/DownloadFilePayload'
 import type { DownloadFileRequesResponse } from '@/shared/interfaces/http/DownloadFileRequesResponse'
 import { useRouter } from 'vue-router'
@@ -31,6 +33,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
+import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 
 const userStore = useUserStore()
 
@@ -111,6 +114,22 @@ const updateComponentData = async () => {
 }
 
 // ACTIONS
+
+const openDeleteFileDialog = (data: CatalogFileRecord) => {
+  const dialogSpecs = {
+    props: { ...dialogDefaultProps, header: 'Delete File' },
+    templates: {},
+    data: data,
+    onClose: async (options?: DynamicDialogCloseOptions) => {
+      if (options?.data?.refresh) {
+        await updateComponentData()
+        await nextTick()
+      }
+    },
+  }
+
+  const dialogRef = dialog.open(DeleteFileContent, dialogSpecs)
+}
 
 const extractUserCollections = (passport: UserPassportResponse): string[] => {
   return passport.passportVisaAssertions
@@ -463,6 +482,14 @@ const streamDownloadToFile = async (url: string, suggestedFileName: string): Pro
               size="small"
               rounded
               v-tooltip.bottom="'Download'"
+            />
+            <Button
+              icon="pi pi-trash"
+              @click="openDeleteFileDialog(data)"
+              severity="secondary"
+              size="small"
+              rounded
+              v-tooltip.bottom="'Delete'"
             />
           </div>
         </template>

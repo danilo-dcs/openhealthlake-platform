@@ -8,5 +8,5 @@ export interface UploadFileRequestPayload {
   file_size: number
   public?: boolean
   processing_level?: ProcessingLevel
-  file_desscription?: string
+  file_description?: string
 }

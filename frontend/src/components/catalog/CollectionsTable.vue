@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import DynamicDialog from 'primevue/dynamicdialog'
+import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
@@ -24,11 +25,11 @@ import { ref, onMounted, nextTick, computed, watch } from 'vue'
 
 import CreateCollectionDialogContent from '@/components/catalog/CreateCollectionDialogContent.vue'
 
-import RequestAccessContent from './RequestAccessContent.vue'
-// import UploadFileContent from './UploadFileContent.vue'
-import InfoContent from './CollectionInfoContent.vue'
-import ControlAccessContent from './ControlAccessContent.vue'
-import DeleteCollectionContent from './DeleteCollectionContent.vue'
+import RequestAccessContent from '@/components/catalog/RequestAccessContent.vue'
+// import UploadFileContent from '@/components/catalog/UploadFileContent.vue'
+import InfoContent from '@/components/catalog/CollectionInfoContent.vue'
+import ControlAccessContent from '@/components/catalog/ControlAccessContent.vue'
+import DeleteCollectionContent from '@/components/catalog/DeleteCollectionContent.vue'
 
 import type {
   CatalogCollectionRecord,
@@ -288,8 +289,8 @@ const openDeleteCollectionDialog = (data: CatalogCollectionRecord) => {
     },
     templates: {},
     data: data,
-    onClose: async (result: { data?: { refresh?: boolean } }) => {
-      if (result.data?.refresh) {
+    onClose: async (options?: DynamicDialogCloseOptions) => {
+      if (options?.data?.refresh) {
         await updateComponentData()
         await nextTick()
       }

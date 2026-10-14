@@ -52,7 +52,7 @@ const formValues = ref<UploadFileRequestPayload>({
   file_version: 1,
   file_size: 0,
   processing_level: 'raw' as ProcessingLevel,
-  file_desscription: '',
+  file_description: '',
 })
 
 const closeDialog = () => {
@@ -153,7 +153,7 @@ const uploadRequest = async (): Promise<UploadFileResponse> => {
     file_version: formValues.value.file_version,
     file_size: formValues.value.file_size,
     processing_level: formValues.value.processing_level,
-    file_desscription: formValues.value.file_desscription,
+    file_description: formValues.value.file_description,
   }
 
   const responseData = await apiRequestHandler<UploadFileResponse>(url, 'POST', body)
@@ -269,7 +269,7 @@ const uploadCloudRequest = async (url: string, method: string): Promise<Response
 
     <div>
       <label for="description" class="block font-bold mb-3">Description (Optional)</label>
-      <TextArea id="description" v-model="formValues.file_desscription" rows="3" cols="20" fluid />
+      <TextArea id="description" v-model="formValues.file_description" rows="3" cols="20" fluid />
     </div>
 
     <Divider />
