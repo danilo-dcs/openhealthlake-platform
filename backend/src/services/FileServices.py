@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 import boto3
 from google.cloud import storage
@@ -24,6 +25,26 @@ MultiPartParser.max_file_size = 20 * 1024 * 1024  # setting th emax file size to
 
 class FileServices:
 
+    @staticmethod
+    def __minio_client_options(url: str) -> tuple[str, bool]:
+        """Return the host:port and TLS flag expected by the MinIO SDK."""
+        parsed_url = urlsplit(url if "://" in url else f"http://{url}")
+
+        if parsed_url.scheme not in ("http", "https") or not parsed_url.hostname:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid MinIO endpoint. Provide an http(s) URL with a host and optional port.",
+            )
+
+        if parsed_url.path not in ("", "/") or parsed_url.query or parsed_url.fragment:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid MinIO endpoint. Paths, query strings, and fragments are not supported.",
+            )
+
+        return parsed_url.netloc, parsed_url.scheme == "https"
+
+    @staticmethod
     async def __get_credential_by_storage_bucket(self, storage_type: str, bucket_name: str) -> CouchbaseCredentialModel:
         credentialServices = CredentialServices()
 
@@ -169,9 +190,9 @@ class FileServices:
 
         elif collection_record.storage_type == "s3":
 
-            credential = GoogleCredentialsModel(**decoded_credential)
+            credential = AmazonCredentialsModel(**decoded_credential)
 
-            if not credential.project_id:
+            if not credential.access_key:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="Invalid Google Cloud credential"
@@ -202,11 +223,13 @@ class FileServices:
                     detail="Invalid MinIO credential"
                 )
 
+            endpoint, secure = self.__minio_client_options(credential.url)
+
             client = Minio(
-                endpoint=str(credential.url),
+                endpoint=endpoint,
                 access_key=credential.accessKey,
                 secret_key=credential.secretKey,
-                secure=True,  # False for plain HTTP
+                secure=secure,
             )
 
             upload_url = client.presigned_put_object(
@@ -314,7 +337,17 @@ class FileServices:
         blob_name = f"lakehouse/collections/{catalog_record.collection_name}/{catalog_record.processing_level}/v{catalog_record.file_version}/{catalog_record.file_name}"
 
         if catalog_record.storage_type == "gcs":
+
+            credential = GoogleCredentialsModel(**decoded_credential)
+            
+            if not credential.project_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Invalid AWS credential"
+                )
+
             storage_client = storage.Client.from_service_account_info(info=decoded_credential)
+
             bucket = storage_client.bucket(catalog_record.file_location)
 
             blob = bucket.blob(blob_name)
@@ -327,7 +360,15 @@ class FileServices:
 
 
         elif catalog_record.storage_type == "s3":
+
             credential = AmazonCredentialsModel(**decoded_credential)
+            
+            if not credential.access_key:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Invalid Google Cloud credential"
+                )
+
             storage_client = boto3.client(
                 "s3",
                 aws_access_key_id=credential.access_key,
@@ -343,11 +384,19 @@ class FileServices:
         elif catalog_record.storage_type == 'minio':
             credential = MinioCredentialsModel(**decoded_credential)
             
+            if not credential.url:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid MinIO credential",
+                )
+
+            endpoint, secure = self.__minio_client_options(credential.url)
+
             client = Minio(
-                credential.url,
+                endpoint,
                 access_key=credential.accessKey,
                 secret_key=credential.secretKey,
-                secure=True,  # False for plain HTTP
+                secure=secure,
             )
 
             download_url = client.presigned_get_object(
