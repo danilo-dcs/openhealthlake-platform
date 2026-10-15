@@ -30,10 +30,10 @@ class CatalogFileBaseModel(BaseModel):
 
 class CatalogCollectionBaseModel(BaseModel):
     collection_name: Optional[str] = None
-    storage_type: Optional[str] = None
     inserted_by: Optional[str] = None
     inserted_at: Optional[int] = None
     status: Optional[FileStatus] = None
+    storage_type: Optional[str] = None
     bucket: Optional[str] = None
     collection_description: Optional[str] = None
     public: Optional[bool] = False

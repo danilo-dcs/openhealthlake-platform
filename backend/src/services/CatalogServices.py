@@ -1,14 +1,6 @@
-import boto3
-from google.cloud import storage
-from google.api_core.exceptions import GoogleAPICallError
 from typing import List, Union
 from fastapi import HTTPException, status
 import uuid6
-
-from botocore.exceptions import BotoCoreError, ClientError
-
-import requests
-from requests_kerberos import HTTPKerberosAuth
 
 
 from repositories.CouchbaseRepository import CouchbaseRepository
@@ -18,6 +10,7 @@ from shared.models.catalog import CatalogCollectionBaseModel, CatalogFileBaseMod
 
 from shared.models.credentials import CouchbaseCredentialModel
 from shared.models.storage import Collections
+from shared.factories.StorageClientFactory import StorageClientFactory
 
 import math
 
@@ -412,65 +405,23 @@ class CatalogServices:
 
         decrypted_credential = encryptionHandler.decrypt_credentials(credential.credential)
 
-        blob_name = f"lakehouse/collections/{file_record.collection_name}/{file_record.processing_level}/v{file_record.file_version}/{file_record.file_name}"
-
-        if file_record.storage_type == "gcs":
-            try:
-                storage_client = storage.Client.from_service_account_info(info=decrypted_credential)
-                bucket = storage_client.bucket(file_record.file_bucket)
-                blob = bucket.blob(blob_name)
-                blob.delete()
-                storage_client.close()
-            except GoogleAPICallError as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, 
-                    detail=f"Failed to delete blob: {e.message}"
-                )
-
-        elif file_record.storage_type == "s3":
-            try:
-                storage_client = boto3.client(
-                    "s3",
-                    aws_access_key_id=decrypted_credential.get("access_key", ""),
-                    aws_secret_access_key=decrypted_credential.get("secret_access_key", ""),
-                    region_name=decrypted_credential.get("region", "")
-                )
-
-                storage_client.delete_object(
-                    Bucket=file_record.file_bucket,
-                    Key=blob_name
-                )
-
-                storage_client.close()
-            except ClientError as e:
-                error_code = e.response['Error']['Code']
-                error_message = e.response['Error']['Message']
-                raise HTTPException(status_code=error_code, detail=error_message)
-            except BotoCoreError as e:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Boto3 Error: {str(e)}")
-            
-        else:
-            namenode = file_record.file_bucket
-            port = 9870  # Default WebHDFS port
-
-            username = decrypted_credential.get("username", "")
-            password = decrypted_credential.get("password", ""),
-
-            # if using kerberos
-            # kerberos_auth = HTTPKerberosAuth(
-            #     principal=f"{username}@HADOOP.LOCAL",
-            #     password=password
-            # )
-
-            url = f"http://{namenode}:{port}/webhdfs/v1/{blob_name}?op=DELETE"
-
-            response = requests.delete(
-                url=url, 
-                # auth=kerberos_auth
-            )
-
-            if not response.status_code == 200:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error deleting file: {response.text}")
+        blob_name = (
+            f"{file_record.file_bucket}/collections/{file_record.collection_name}/"
+            f"{file_record.processing_level or 'raw'}/v{file_record.file_version}/{file_record.file_name}"
+        )
+        storage_client = StorageClientFactory.create_client(
+            file_record.storage_type,
+            decrypted_credential,
+            endpoint=file_record.file_bucket if file_record.storage_type == "hdfs" else None,
+            minio_endpoint_use="internal",
+        )
+        try:
+            if file_record.storage_type == "hdfs":
+                storage_client.delete_object(blob_name)
+            else:
+                storage_client.delete_object(file_record.file_bucket, blob_name)
+        finally:
+            storage_client.close()
 
         await self.set_record_status(document_id=file_record.id, new_status = "deleted", collection_name="files")
 

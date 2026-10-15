@@ -29,6 +29,7 @@ export interface MinioCredential {
 }
 
 export interface HdfsCredential {
+  namenode_address: string
   user: string
   password: string
 }

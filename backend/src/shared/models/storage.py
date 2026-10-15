@@ -27,7 +27,6 @@ class DownloadFileRequestPayload(BaseModel):
 class CreateCollectionPayload(BaseModel):
     storage_type: Storage
     collection_name: str
-    namenode_address: Optional[str] = None
     bucket_name: Optional[str] = None
     collection_description: Optional[str] = None
     public: Optional[bool] = False

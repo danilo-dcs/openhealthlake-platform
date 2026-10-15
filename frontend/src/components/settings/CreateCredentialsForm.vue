@@ -84,6 +84,7 @@ const getCredentialTemplateText = (): void => {
       }`
   } else {
     formPlaceHolder.value = `{
+      "namenode_address": "string",
       "user": "string",
       "password": "string"
     }`

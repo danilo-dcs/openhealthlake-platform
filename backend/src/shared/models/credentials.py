@@ -29,6 +29,7 @@ class AmazonCredentialsModel(BaseModel):
     region: Optional[str] = None
 
 class HadoopCredentialsModel(BaseModel):
+    namenode_address: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
 

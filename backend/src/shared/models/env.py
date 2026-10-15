@@ -12,6 +12,7 @@ class EnvSettings(BaseSettings):
     COUCHBASE_PASSWORD: Optional[str] = None
     COUCHBASE_TOTAL_MEMORY_QUOTA: Optional[int] = None
     MINIO_DOMAIN: Optional[str] = None
+    MINIO_INTERNAL_ENDPOINT: Optional[str] = None
     MINIO_REGION: Optional[str] = None
     MINIO_USER: Optional[str] = None
     MINIO_PASSWORD: Optional[str] = None
