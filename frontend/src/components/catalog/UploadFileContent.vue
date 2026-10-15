@@ -89,69 +89,65 @@ const onFileSelect = (event: FileUploadSelectEvent) => {
 }
 
 const uploadFileAction = async (): Promise<void> => {
-  if (selectedFile == null) {
+  const file = selectedFile.value
+  if (!file) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'No file chosen!',
+      detail: 'Choose a file before uploading.',
+      life: 4000,
+    })
+    return
+  }
+
+  const collectionId = collection.value?.id
+  if (!collectionId) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'The collection could not be identified. Close this dialog and try again.',
       life: 4000,
     })
     return
   }
 
   isUploading.value = true
+  try {
+    const response = await uploadRequest(collectionId, file)
+    if (!response.upload_url || !response.method) {
+      throw new Error('The storage API returned an incomplete upload request.')
+    }
 
-  const response = await uploadRequest()
+    await uploadFile(file, response.upload_url, response.method)
 
-  if (!response.upload_url) {
-    isUploading.value = false
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `Upload failed: Unable to obtain storage link from lakehouse API (/storage/upload-request)`,
+      severity: 'success',
+      summary: 'Success',
+      detail: 'File was successfully uploaded!',
       life: 4000,
     })
-    return
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Upload failed',
+      detail: error instanceof Error ? error.message : 'An unexpected error occurred.',
+      life: 6000,
+    })
+  } finally {
+    isUploading.value = false
   }
-
-  uploadCloudRequest(response.upload_url, response.method)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error('Upload failed with status ' + response.status)
-      }
-
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'File was successfully uploaded!',
-        life: 4000,
-      })
-    })
-    .catch((error) => {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Upload failed: ${error}`,
-        life: 4000,
-      })
-    })
-    .finally(() => {
-      isUploading.value = false
-    })
-
-  isUploading.value = false
 }
 
 // API REQUESTS
-const uploadRequest = async (): Promise<UploadFileResponse> => {
+const uploadRequest = async (collectionId: string, file: File): Promise<UploadFileResponse> => {
   const url = '/storage/files/upload-request'
 
   const body: UploadFileRequestPayload = {
-    collection_catalog_id: collection.value?.id || '',
-    file_name: formValues.value.file_name,
+    collection_catalog_id: collectionId,
+    file_name: file.name,
     file_category: formValues.value.file_category,
     file_version: formValues.value.file_version,
-    file_size: formValues.value.file_size,
+    file_size: file.size,
     processing_level: formValues.value.processing_level,
     file_description: formValues.value.file_description,
   }
@@ -161,29 +157,29 @@ const uploadRequest = async (): Promise<UploadFileResponse> => {
   return responseData
 }
 
-const uploadCloudRequest = async (url: string, method: string): Promise<Response> => {
-  const fileStream: ReadableStream<Uint8Array> = selectedFile.value?.stream()!
-
+const uploadFile = async (file: File, url: string, method: string): Promise<void> => {
   toast.add({
     severity: 'info',
     summary: 'Uploading...',
-    detail: 'Your file is being uploaded in the background!',
-    life: 4000,
+    detail: `Uploading ${file.name}…`,
+    life: 3000,
   })
 
-  const uploadPromise = fetch(url, {
-    method: method,
+  const response = await fetch(url, {
+    method,
     headers: {
       'Content-Type': 'application/octet-stream',
-      'X-File-Name': encodeURIComponent(formValues.value.file_name),
-      'X-File-Size': formValues.value.file_size.toString(),
-      'X-File-Type': selectedFile.value?.type || '',
     },
-    body: fileStream,
-    duplex: 'half',
-  } as any)
+    body: file,
+  })
 
-  return uploadPromise
+  if (!response.ok) {
+    const responseDetail = await response.text()
+    throw new Error(
+      `Storage upload failed (${response.status}${response.statusText ? ` ${response.statusText}` : ''})${responseDetail ? `: ${responseDetail}` : '.'}`,
+    )
+  }
+
 }
 </script>
 

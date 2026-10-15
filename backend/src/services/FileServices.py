@@ -17,6 +17,7 @@ from services.CredentialServices import CredentialServices
 from shared.functions.regex import get_ip_address
 from shared.models.catalog import CatalogFileBaseModel, CatalogFilter
 from shared.models.credentials import AmazonCredentialsModel, CouchbaseCredentialModel, GoogleCredentialsModel, MinioCredentialsModel
+from shared.models.env import EnvSettings
 from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UploadFileRequestPayload, UploadFileRequestResponse
 from shared.handlers.TimeHandler import TimeHandler
 
@@ -29,6 +30,32 @@ class FileServices:
     def __minio_client_options(url: str) -> tuple[str, bool]:
         """Return the host:port and TLS flag expected by the MinIO SDK."""
         parsed_url = urlsplit(url if "://" in url else f"http://{url}")
+
+        if "localhost" in url or "127.0.0.1" in url:
+            env = EnvSettings()
+            if not env.MINIO_DOMAIN:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="MINIO_DOMAIN must be configured when the MinIO credential uses localhost.",
+                )
+
+            replacement = env.MINIO_DOMAIN.strip()
+            replacement_url = urlsplit(
+                replacement if "://" in replacement else f"{parsed_url.scheme}://{replacement}"
+            )
+            try:
+                if replacement_url.port is None and parsed_url.port is not None:
+                    replacement_url = replacement_url._replace(
+                        netloc=f"{replacement_url.netloc}:{parsed_url.port}"
+                    )
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid MINIO_DOMAIN configuration. Missing minio port",
+                ) from error
+
+            url = replacement_url.geturl()
+            parsed_url = urlsplit(url)
 
         if parsed_url.scheme not in ("http", "https") or not parsed_url.hostname:
             raise HTTPException(
@@ -45,7 +72,7 @@ class FileServices:
         return parsed_url.netloc, parsed_url.scheme == "https"
 
     @staticmethod
-    async def __get_credential_by_storage_bucket(self, storage_type: str, bucket_name: str) -> CouchbaseCredentialModel:
+    async def __get_credential_by_storage_bucket(storage_type: str, bucket_name: str) -> CouchbaseCredentialModel:
         credentialServices = CredentialServices()
 
         credentials = await credentialServices.list_all_cloud(collection_name="cloud")
