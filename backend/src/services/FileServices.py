@@ -252,11 +252,14 @@ class FileServices:
 
             endpoint, secure = self.__minio_client_options(credential.url)
 
+            minio_region = EnvSettings().MINIO_REGION
+
             client = Minio(
                 endpoint=endpoint,
                 access_key=credential.accessKey,
                 secret_key=credential.secretKey,
                 secure=secure,
+                region=minio_region
             )
 
             upload_url = client.presigned_put_object(
@@ -424,6 +427,7 @@ class FileServices:
                 access_key=credential.accessKey,
                 secret_key=credential.secretKey,
                 secure=secure,
+                region=EnvSettings().MINIO_REGION,
             )
 
             download_url = client.presigned_get_object(
