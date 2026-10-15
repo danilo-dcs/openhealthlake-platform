@@ -97,7 +97,7 @@ async def get_catalog_collection_record_by_id(request: Request, record_uuid: str
     description="""
     Parameters: \n
         - Filter: {\n
-            - property_name: the property name must be part of the properties in the catalog (Options:  filename, file_size,collection_name,processing_level,storage_type,file_location,inserted_by,inserted_at,file_description,file_category,status,expires_at,file_version)\n
+            - property_name: the property name must be part of the properties in the catalog (Options:  filename, file_size,collection_name,processing_level,storage_type,file_bucket,inserted_by,inserted_at,file_description,file_category,status,expires_at,file_version)\n
             - Operator: The operators symbols in the filters should be one of the followint options ('=','>','<', '>=', '<=')\n
             - property_value: the property value can be a str, int, or float value. For dates, it should be the unix timestamp value repesenting the date as an integer\n
         }
@@ -129,7 +129,7 @@ async def get_file_catalog_by_filters(
     description="""
     Parameters: \n
         - Filter: {\n
-            - property_name: the property name must be part of the properties in the catalog (Options: collection_name,storage_type,inserted_by,status,location,collection_description)\n
+            - property_name: the property name must be part of the properties in the catalog (Options: collection_name,storage_type,inserted_by,status,bucket,collection_description)\n
             - operator: The operators symbols in the filters should be one of the followint options ('=','>','<', '>=', '<=', '*')\n
             - property_value: the property value can be a str, int, or float value. For dates, it should be the unix timestamp value repesenting the date as an integer\n
         }

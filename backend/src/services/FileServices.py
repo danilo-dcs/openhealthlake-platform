@@ -1,12 +1,15 @@
 from datetime import timedelta
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import boto3
 from google.cloud import storage
+from google.api_core.exceptions import NotFound as GoogleNotFound
 # from hdfs import InsecureClient
 from minio import Minio
+from minio.error import S3Error
 
 from fastapi import HTTPException, status
+from botocore.exceptions import ClientError
 import requests
 
 
@@ -15,7 +18,7 @@ from starlette.formparsers import MultiPartParser
 from services.CatalogServices import CatalogServices
 from services.CredentialServices import CredentialServices
 from shared.functions.regex import get_ip_address
-from shared.models.catalog import CatalogFileBaseModel, CatalogFilter
+from shared.models.catalog import CatalogFileBaseModel, CatalogFilter, CouchbaseCatalogFileModel, CouchbaseCatalogCollectionModel
 from shared.models.credentials import AmazonCredentialsModel, CouchbaseCredentialModel, GoogleCredentialsModel, MinioCredentialsModel
 from shared.models.env import EnvSettings
 from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UploadFileRequestPayload, UploadFileRequestResponse
@@ -72,6 +75,15 @@ class FileServices:
         return parsed_url.netloc, parsed_url.scheme == "https"
 
     @staticmethod
+    def __file_object_name(file_record: CatalogFileBaseModel) -> str:
+        env = EnvSettings()
+        return (
+            f"{file_record.file_bucket}/collections/{file_record.collection_name}/"
+            f"{file_record.processing_level or 'raw'}/"
+            f"v{file_record.file_version}/{file_record.file_name}"
+        )
+
+    @staticmethod
     async def __get_credential_by_storage_bucket(storage_type: str, bucket_name: str) -> CouchbaseCredentialModel:
         credentialServices = CredentialServices()
 
@@ -118,7 +130,7 @@ class FileServices:
         
         credential = await self.__get_credential_by_storage_bucket(
             storage_type=collection_record.storage_type,
-            bucket_name=collection_record.location,
+            bucket_name=collection_record.bucket,
         )
         
         #checking for redundant file
@@ -169,7 +181,7 @@ class FileServices:
             file_name=payload.file_name,
             file_category=payload.file_category if payload.file_category else "unstructured",
             processing_level=payload.processing_level if payload.processing_level else "raw",
-            file_location=collection_record.location,
+            file_location=collection_record.bucket,
             storage_type=collection_record.storage_type,
             inserted_by=collection_record.inserted_by,
             inserted_at=inserted_at,
@@ -185,7 +197,7 @@ class FileServices:
 
         upload_url = None
 
-        blob_name = f"lakehouse/collections/{collection_record.collection_name}/raw/v{catalog_payload.file_version}/{catalog_payload.file_name}"
+        blob_name = self.__file_object_name(catalog_payload)
 
         decoded_credential = encryptionHandler.decrypt_credentials(credential.credential)
 
@@ -203,7 +215,7 @@ class FileServices:
  
             storage_client = storage.Client.from_service_account_info(info=decoded_credential)
 
-            bucket = storage_client.bucket(collection_record.location)
+            bucket = storage_client.bucket(collection_record.bucket)
             blob = bucket.blob(blob_name)
 
             upload_url = blob.generate_signed_url(
@@ -234,7 +246,7 @@ class FileServices:
 
             upload_url = storage_client.generate_presigned_url(
                 'put_object',
-                Params={'Bucket': collection_record.location, 'Key': blob_name, "ContentType": "application/octet-stream"},
+                Params={'Bucket': collection_record.bucket, 'Key': blob_name, "ContentType": "application/octet-stream"},
                 ExpiresIn=expiry_in
             )
 
@@ -263,7 +275,7 @@ class FileServices:
             )
 
             upload_url = client.presigned_put_object(
-                bucket_name=collection_record.location,
+                bucket_name=collection_record.bucket,
                 object_name=blob_name,
                 expires=timedelta(minutes=30),
             )
@@ -272,7 +284,7 @@ class FileServices:
 
             overwrite = False
 
-            hdfs_address = get_ip_address(collection_record.location)
+            hdfs_address = get_ip_address(collection_record.bucket)
 
             if not hdfs_address:
                 raise HTTPException(
@@ -322,6 +334,160 @@ class FileServices:
             catalog_record_id=catalogRecord.id
         )
 
+    async def complete_upload(
+        self,
+        catalog_record_id: str,
+        user_id: str,
+    ) -> CouchbaseCatalogFileModel:
+        """Verify an uploaded object and mark its catalog record ready."""
+        from shared.handlers.EncryptionHandler import EncryptionHandler
+
+        catalog_services = CatalogServices()
+        file_record = await catalog_services.get_by_id(
+            document_id=catalog_record_id,
+            user_id=user_id,
+            collection_name="files",
+        )
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File upload record was not found or is not accessible.",
+            )
+
+        if file_record.file_status == "ready":
+            return file_record
+        if file_record.file_status != "uploading":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"File record cannot be completed from status '{file_record.file_status}'.",
+            )
+
+        credential_record = await self.__get_credential_by_storage_bucket(
+            storage_type=file_record.storage_type,
+            bucket_name=file_record.file_bucket,
+        )
+        credential = EncryptionHandler().decrypt_credentials(credential_record.credential)
+        object_name = self.__file_object_name(file_record)
+        object_size: int
+
+        if file_record.storage_type == "gcs":
+            storage_client = storage.Client.from_service_account_info(info=credential)
+            try:
+                blob = storage_client.bucket(file_record.file_bucket).blob(object_name)
+                blob.reload()
+                object_size = int(blob.size)
+            except GoogleNotFound as error:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Uploaded object is not available yet.",
+                ) from error
+            finally:
+                storage_client.close()
+
+        elif file_record.storage_type == "s3":
+            s3_client = boto3.client(
+                "s3",
+                aws_access_key_id=credential.get("access_key", ""),
+                aws_secret_access_key=credential.get("secret_access_key", ""),
+                region_name=credential.get("region", ""),
+            )
+            try:
+                metadata = s3_client.head_object(
+                    Bucket=file_record.file_bucket,
+                    Key=object_name,
+                )
+                object_size = int(metadata["ContentLength"])
+            except ClientError as error:
+                error_code = error.response.get("Error", {}).get("Code", "")
+                if error_code in {"404", "NoSuchKey", "NotFound"}:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Uploaded object is not available yet.",
+                    ) from error
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Unable to verify the uploaded object in S3.",
+                ) from error
+            finally:
+                s3_client.close()
+
+        elif file_record.storage_type == "minio":
+            minio_credential = MinioCredentialsModel(**credential)
+            if not minio_credential.url:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid MinIO credential.",
+                )
+            endpoint, secure = self.__minio_client_options(minio_credential.url)
+            minio_client = Minio(
+                endpoint,
+                access_key=minio_credential.accessKey,
+                secret_key=minio_credential.secretKey,
+                secure=secure,
+                region=EnvSettings().MINIO_REGION,
+            )
+            try:
+                metadata = minio_client.stat_object(file_record.file_bucket, object_name)
+                object_size = int(metadata.size)
+            except S3Error as error:
+                if error.code in {"NoSuchKey", "NoSuchObject"}:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Uploaded object is not available yet.",
+                    ) from error
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Unable to verify the uploaded object in MinIO.",
+                ) from error
+
+        elif file_record.storage_type == "hdfs":
+            hdfs_address = get_ip_address(file_record.file_bucket)
+            if not hdfs_address:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid namenode address.",
+                )
+
+            response = requests.get(
+                f"{hdfs_address}:9870/webhdfs/v1/{quote(object_name, safe='/')}",
+                params={"op": "GETFILESTATUS"},
+                timeout=30,
+            )
+            if response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Uploaded object is not available yet.",
+                )
+            if not response.ok:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Unable to verify the uploaded object in HDFS.",
+                )
+            object_size = int(response.json()["FileStatus"]["length"])
+
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported storage type '{file_record.storage_type}'.",
+            )
+
+        if file_record.file_size is not None and object_size != file_record.file_size:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Uploaded object size ({object_size} bytes) does not match the "
+                    f"expected size ({file_record.file_size} bytes)."
+                ),
+            )
+
+        record_status = await catalog_services.set_record_status(
+            document_id=catalog_record_id,
+            new_status="ready",
+            collection_name="files",
+        )
+
+        return record_status
+
    
     async def create_download_request_directly(
         self,
@@ -346,12 +512,12 @@ class FileServices:
                 detail="Catalog record does not exist or invalid record id!"
             )
         
-        credential = await self.__get_credential_by_storage_bucket(storage_type=catalog_record.storage_type, bucket_name=catalog_record.file_location)
+        credential = await self.__get_credential_by_storage_bucket(storage_type=catalog_record.storage_type, bucket_name=catalog_record.file_bucket)
 
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
-                detail=f"Missing credentials to operate in the following bucket enviroment {catalog_record.file_location}"
+                detail=f"Missing credentials to operate in the following bucket enviroment {catalog_record.file_bucket}"
             )
         
         decoded_credential = enctyptionHandler.decrypt_credentials(credential.credential)
@@ -364,7 +530,7 @@ class FileServices:
 
         download_url = None
 
-        blob_name = f"lakehouse/collections/{catalog_record.collection_name}/{catalog_record.processing_level}/v{catalog_record.file_version}/{catalog_record.file_name}"
+        blob_name = self.__file_object_name(catalog_record)
 
         if catalog_record.storage_type == "gcs":
 
@@ -378,7 +544,7 @@ class FileServices:
 
             storage_client = storage.Client.from_service_account_info(info=decoded_credential)
 
-            bucket = storage_client.bucket(catalog_record.file_location)
+            bucket = storage_client.bucket(catalog_record.file_bucket)
 
             blob = bucket.blob(blob_name)
 
@@ -407,7 +573,7 @@ class FileServices:
             )
             download_url = storage_client.generate_presigned_url(
                 'get_object',
-                Params={'Bucket': catalog_record.file_location, 'Key': blob_name},
+                Params={'Bucket': catalog_record.file_bucket, 'Key': blob_name},
                 ExpiresIn=expire_time
             )
 
@@ -431,14 +597,14 @@ class FileServices:
             )
 
             download_url = client.presigned_get_object(
-                bucket_name=catalog_record.file_location,
+                bucket_name=catalog_record.file_bucket,
                 object_name=blob_name,
                 expires=timedelta(minutes=30),
             )
 
 
         elif catalog_record.storage_type == 'hdfs':
-            download_url=f"{catalog_record.file_location}/webhdfs/v1/{blob_name}?op=OPEN"
+            download_url=f"{catalog_record.file_bucket}/webhdfs/v1/{blob_name}?op=OPEN"
 
         return DownloadFileRequestResponse(
             download_url=download_url

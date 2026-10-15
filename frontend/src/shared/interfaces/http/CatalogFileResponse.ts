@@ -4,7 +4,7 @@ export interface CatalogFileRecord {
   collection_name: string
   processing_level: string
   storage_type: string
-  file_location: string
+  file_bucket: string
   inserted_by: string
   inserted_at: number
   file_description: string

@@ -400,12 +400,12 @@ class CatalogServices:
         if user_id not in file_collection.inserted_by:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Insuficient privileges for this operation. Only collection can delete files")
 
-        credential = await self.__get_credential_by_storage_bucket(storage_type=file_record.storage_type, bucket_name=file_record.file_location)
+        credential = await self.__get_credential_by_storage_bucket(storage_type=file_record.storage_type, bucket_name=file_record.file_bucket)
 
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
-                detail=f"Missing credentials to operate in the following bucket enviroment {file_record.file_location}"
+                detail=f"Missing credentials to operate in the following bucket enviroment {file_record.file_bucket}"
             )
 
         encryptionHandler = EncryptionHandler()
@@ -417,7 +417,7 @@ class CatalogServices:
         if file_record.storage_type == "gcs":
             try:
                 storage_client = storage.Client.from_service_account_info(info=decrypted_credential)
-                bucket = storage_client.bucket(file_record.file_location)
+                bucket = storage_client.bucket(file_record.file_bucket)
                 blob = bucket.blob(blob_name)
                 blob.delete()
                 storage_client.close()
@@ -437,7 +437,7 @@ class CatalogServices:
                 )
 
                 storage_client.delete_object(
-                    Bucket=file_record.file_location,
+                    Bucket=file_record.file_bucket,
                     Key=blob_name
                 )
 
@@ -450,7 +450,7 @@ class CatalogServices:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Boto3 Error: {str(e)}")
             
         else:
-            namenode = file_record.file_location
+            namenode = file_record.file_bucket
             port = 9870  # Default WebHDFS port
 
             username = decrypted_credential.get("username", "")

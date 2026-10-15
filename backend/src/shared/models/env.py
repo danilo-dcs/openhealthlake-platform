@@ -15,6 +15,7 @@ class EnvSettings(BaseSettings):
     MINIO_REGION: Optional[str] = None
     MINIO_USER: Optional[str] = None
     MINIO_PASSWORD: Optional[str] = None
+    MINIO_DEFAULT_BUCKET_NAME: Optional[str] = None
     ENCRYPTION_SECRET_KEY: Optional[str] = None
     AUTH_SECRET_KEY: Optional[str] = None
     REFRESH_TOKEN_KEY: Optional[str] = None

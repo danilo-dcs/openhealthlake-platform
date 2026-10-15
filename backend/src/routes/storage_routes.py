@@ -10,6 +10,7 @@ from starlette.formparsers import MultiPartParser
 from services.CollectionServices import CollectionServices
 from services.CredentialServices import CredentialServices
 from services.FileServices import FileServices
+from shared.models.catalog import CouchbaseCatalogFileModel
 from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, DownloadFileRequestPayload, DownloadFileRequestResponse, GetStorageBucketListResponse, UploadFileRequestPayload, UploadFileRequestResponse
 from routes.auth_routes import auth_oauth2_scheme
 
@@ -92,3 +93,20 @@ async def upload_file_request_direct(
     result = await files_services.create_upload_file_request_directly(payload=payload, user_id=user_id)
 
     return result
+
+
+@router.post(
+    "/files/{catalog_record_id}/complete",
+    summary="Verify an uploaded object and complete its catalog record",
+    response_model=CouchbaseCatalogFileModel,
+)
+async def complete_file_upload(
+    catalog_record_id: str,
+    request: Request,
+    _: str = Depends(auth_oauth2_scheme),
+) -> CouchbaseCatalogFileModel:
+    files_services = FileServices()
+    return await files_services.complete_upload(
+        catalog_record_id=catalog_record_id,
+        user_id=request.state.user,
+    )

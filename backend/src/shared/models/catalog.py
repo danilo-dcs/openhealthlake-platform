@@ -18,7 +18,7 @@ class CatalogFileBaseModel(BaseModel):
     collection_name: Optional[str] = None
     processing_level: Optional[str] = None
     storage_type: Optional[str] = None
-    file_location: Optional[str] = None
+    file_bucket: Optional[str] = None
     inserted_by: Optional[str] = None
     inserted_at: Optional[int] = None
     file_description: Optional[str] = None
@@ -34,7 +34,7 @@ class CatalogCollectionBaseModel(BaseModel):
     inserted_by: Optional[str] = None
     inserted_at: Optional[int] = None
     status: Optional[FileStatus] = None
-    location: Optional[str] = None
+    bucket: Optional[str] = None
     collection_description: Optional[str] = None
     public: Optional[bool] = False
     secret: Optional[bool] = False

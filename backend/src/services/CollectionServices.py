@@ -50,7 +50,7 @@ class CollectionServices:
                 property_value=payload.storage_type
             ),
             CatalogFilter(
-                property_name="location",
+                property_name="bucket",
                 operator="=",
                 property_value=payload.bucket_name if payload.namenode_address == 'hdfs' else payload.bucket_name
             ),
@@ -76,7 +76,7 @@ class CollectionServices:
         catalog_record_payload = CatalogCollectionBaseModel(
             collection_name=payload.collection_name,
             storage_type=payload.storage_type,
-            location=payload.bucket_name if payload.namenode_address == 'hdfs' else payload.bucket_name,
+            bucket=payload.bucket_name if payload.namenode_address == 'hdfs' else payload.bucket_name,
             status='ready',
             inserted_by=inserted_by,
             inserted_at=inserted_at,
