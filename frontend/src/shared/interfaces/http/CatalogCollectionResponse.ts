@@ -8,6 +8,7 @@ export interface CatalogCollectionRecord {
   collection_description: string
   public: false
   secret: false
+  labels: string[]
   id: string
 }
 

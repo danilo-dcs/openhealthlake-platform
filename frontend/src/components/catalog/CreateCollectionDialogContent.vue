@@ -34,6 +34,7 @@ const newCollection = ref<CreateCollectionPayload>({
   bucket_name: '',
   public: false,
   secret: false,
+  labels: []
 })
 
 const createCollectionLoadingBtn = ref<boolean>(false)
@@ -59,6 +60,7 @@ onMounted(() => {
     bucket_name: '',
     public: false,
     secret: false,
+    labels: []
   }
 })
 
@@ -128,6 +130,7 @@ const saveCollection = async () => {
     bucket_name: '',
     public: false,
     secret: false,
+    labels: []
   }
 }
 

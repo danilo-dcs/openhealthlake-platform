@@ -21,6 +21,7 @@ import type { FileCategory, ProcessingLevel } from '@/shared/interfaces/types'
 
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
+import type { CatalogFileRecord } from '@/shared/interfaces/http/CatalogFileResponse'
 
 const userStore = useUserStore()
 
@@ -53,6 +54,7 @@ const formValues = ref<UploadFileRequestPayload>({
   file_size: 0,
   processing_level: 'raw' as ProcessingLevel,
   file_description: '',
+  labels: []
 })
 
 const closeDialog = () => {
@@ -101,6 +103,7 @@ const uploadFileAction = async (): Promise<void> => {
   }
 
   const collectionId = collection.value?.id
+
   if (!collectionId) {
     toast.add({
       severity: 'error',
@@ -112,20 +115,34 @@ const uploadFileAction = async (): Promise<void> => {
   }
 
   isUploading.value = true
+
   try {
-    const response = await uploadRequest(collectionId, file)
-    if (!response.upload_url || !response.method) {
+    const uploadFileResponse = await uploadRequest(collectionId, file)
+
+    if (!uploadFileResponse.upload_url || !uploadFileResponse.method) {
       throw new Error('The storage API returned an incomplete upload request.')
     }
 
-    await uploadFile(file, response.upload_url, response.method)
+    await uploadFile(file, uploadFileResponse.upload_url, uploadFileResponse.method)
 
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'File was successfully uploaded!',
-      life: 4000,
-    })
+    const file_record = await completeUploadRequest(uploadFileResponse.catalog_record_id)
+
+    if(!file_record){
+      toast.add({
+        severity: 'warning',
+        summary: 'Warning',
+        detail: 'File was successfully uploaded but it\'s not ready to be used. Please contact admin!',
+        life: 6000,
+      })
+    } else {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'File was successfully uploaded and it\'s now ready to be used!',
+        life: 6000,
+      })
+    }
+
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -139,6 +156,15 @@ const uploadFileAction = async (): Promise<void> => {
 }
 
 // API REQUESTS
+
+const completeUploadRequest = async (catalog_file_id: string): Promise<CatalogFileRecord> => {
+  const url = `/storage/files/${catalog_file_id}/complete`
+
+  const responseData = await apiRequestHandler<CatalogFileRecord>(url, 'GET')
+
+    return responseData
+}
+
 const uploadRequest = async (collectionId: string, file: File): Promise<UploadFileResponse> => {
   const url = '/storage/files/upload-request'
 
@@ -150,6 +176,7 @@ const uploadRequest = async (collectionId: string, file: File): Promise<UploadFi
     file_size: file.size,
     processing_level: formValues.value.processing_level,
     file_description: formValues.value.file_description,
+    labels: formValues.value.labels,
   }
 
   const responseData = await apiRequestHandler<UploadFileResponse>(url, 'POST', body)

@@ -2,6 +2,8 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel
 
+from backend.src.shared.models.storage import Labels
+
 FileStatus = Literal["ready", "processing", "uploading", "deleted"]
 
 CatalogProcessingLevelFilter = Literal["raw", "processed", "curated"]
@@ -11,6 +13,7 @@ FilterOperators = Literal["=",">","<", ">=", "<=", '*', "!="]
 FileCategory = Literal["structured", "unstructured"]
 
 CatalogType = Literal["files", "collections"]
+
 class CatalogFileBaseModel(BaseModel):
     file_name: Optional[str] = None
     file_size: Optional[int] = None
@@ -27,6 +30,7 @@ class CatalogFileBaseModel(BaseModel):
     expires_at: Optional[int] = None
     file_version: Optional[int] = None
     public: Optional[bool] = False
+    labels: Optional[list[Labels]] = []
 
 class CatalogCollectionBaseModel(BaseModel):
     collection_name: Optional[str] = None
@@ -38,7 +42,7 @@ class CatalogCollectionBaseModel(BaseModel):
     collection_description: Optional[str] = None
     public: Optional[bool] = False
     secret: Optional[bool] = False
-
+    labels: Optional[list[Labels]] = []
 
 class CouchbaseCatalogFileModel(CatalogFileBaseModel):
     id: Optional[str] = None

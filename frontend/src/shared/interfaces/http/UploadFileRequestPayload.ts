@@ -9,4 +9,5 @@ export interface UploadFileRequestPayload {
   public?: boolean
   processing_level?: ProcessingLevel
   file_description?: string
+  labels: string[]
 }

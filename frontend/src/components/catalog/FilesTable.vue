@@ -462,6 +462,22 @@ const streamDownloadToFile = async (url: string, suggestedFileName: string): Pro
           />
         </template>
       </Column>
+      <Column field="labels" header="Labels">
+        <template #body="{ data }">
+          <div class="flex flex-wrap items-start gap-1">
+            <template v-if="data.labels?.length">
+              <Tag
+                v-for="label in data.labels"
+                :key="label.value"
+                :value="label.value"
+                :severity="label.color"
+              />
+            </template>
+
+            <Tag v-else value="No Labels" severity="secondary" />
+          </div>
+        </template>
+      </Column>
       <Column class="w-24 !text-end" header="Actions">
         <template #body="{ data }">
           <div class="flex justify-end gap-2">

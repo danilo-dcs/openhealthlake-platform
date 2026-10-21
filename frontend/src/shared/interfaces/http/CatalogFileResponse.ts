@@ -13,6 +13,7 @@ export interface CatalogFileRecord {
   expires_at: number
   file_version: number
   public: false
+  labels: string[]
   id: string
 }
 

@@ -95,7 +95,7 @@ async def upload_file_request_direct(
     return result
 
 
-@router.post(
+@router.get(
     "/files/{catalog_record_id}/complete",
     summary="Verify an uploaded object and complete its catalog record",
     response_model=CouchbaseCatalogFileModel,

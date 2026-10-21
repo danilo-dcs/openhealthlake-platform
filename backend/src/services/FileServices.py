@@ -120,7 +120,7 @@ class FileServices:
             file_name=payload.file_name,
             file_category=payload.file_category if payload.file_category else "unstructured",
             processing_level=payload.processing_level if payload.processing_level else "raw",
-            file_location=collection_record.bucket,
+            file_bucket=collection_record.bucket,
             storage_type=collection_record.storage_type,
             inserted_by=collection_record.inserted_by,
             inserted_at=inserted_at,
@@ -129,7 +129,8 @@ class FileServices:
             file_description=payload.file_description if payload.file_description else None,
             file_version=payload.file_version if (payload.file_version and payload.file_version > 1 and payload.file_version != latest_version) else latest_version,
             file_size=payload.file_size,
-            public=payload.public if payload.public else collection_record.public
+            public=payload.public if payload.public else collection_record.public,
+            labels=payload.labels
         )
 
         catalogRecord = await catalogServices.create_catalog_record(payload=catalog_payload)
@@ -210,9 +211,7 @@ class FileServices:
         )
         
         try:
-            object_size = storage_client.get_object_size(
-                object_name
-            ) 
+            object_size = storage_client.get_object_size(object_name) 
             
         finally:
             storage_client.close()
@@ -274,29 +273,18 @@ class FileServices:
         
         decoded_credential = enctyptionHandler.decrypt_credentials(credential.credential)
 
-        expire_time = 30 * 60
-
-        expiry_date = timeHandler.expiry_at(seconds=expire_time)
-
-        expiry_date = timeHandler.datetime_to_unix_timestamp(date=expiry_date)
-
         download_url = None
 
         blob_name = self.__file_object_name(catalog_record)
 
         storage_client = StorageClientFactory.create_client(
-            catalog_record.storage_type,
-            decoded_credential,
-            endpoint=catalog_record.file_bucket if catalog_record.storage_type == "hdfs" else None,
-            minio_endpoint_use="public",
+            storage_type=catalog_record.storage_type,
+            bucket=catalog_record.file_bucket,
+            credentials=decoded_credential
         )
 
         try:
-            download_url = storage_client.generate_download_url(
-                blob_name
-            ) if catalog_record.storage_type == "hdfs" else storage_client.generate_download_url(
-                catalog_record.file_bucket, blob_name, expire_time
-            )
+            download_url = storage_client.generate_download_url(blob_name)
         finally:
             storage_client.close()
 

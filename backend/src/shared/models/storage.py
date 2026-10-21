@@ -7,9 +7,16 @@ from shared.models.visas import VisaModel
 
 
 Storage = Literal['gcs', 's3', 'hdfs', 'minio']
+
 Collections = Literal['files', 'collections']
+
 FileCategory = Literal["structured", "unstructured"]
+
 FileProcessingLevel = Literal["raw", "processed", "curated"]
+
+class Labels(BaseModel):
+    value: str 
+    color: str
 
 class UploadFileRequestPayload(BaseModel):
     collection_catalog_id: str 
@@ -20,6 +27,7 @@ class UploadFileRequestPayload(BaseModel):
     public: Optional[bool] = False
     processing_level: Optional[FileProcessingLevel] = "raw"
     file_description: Optional[str] = None
+    labels: Optional[List[Labels]] = []
 
 class DownloadFileRequestPayload(BaseModel):
     catalog_file_id: str

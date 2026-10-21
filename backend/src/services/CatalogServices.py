@@ -409,12 +409,14 @@ class CatalogServices:
             f"{file_record.file_bucket}/collections/{file_record.collection_name}/"
             f"{file_record.processing_level or 'raw'}/v{file_record.file_version}/{file_record.file_name}"
         )
+        
         storage_client = StorageClientFactory.create_client(
-            file_record.storage_type,
-            decrypted_credential,
-            endpoint=file_record.file_bucket if file_record.storage_type == "hdfs" else None,
-            minio_endpoint_use="internal",
+            storage_type=file_record.storage_type,
+            bucket=file_record.file_bucket,
+            credentials=decrypted_credential,
+            # minio_endpoint_use="internal",
         )
+
         try:
             if file_record.storage_type == "hdfs":
                 storage_client.delete_object(blob_name)

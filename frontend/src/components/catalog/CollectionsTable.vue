@@ -44,6 +44,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import AdvancedFiltersForm from './AdvancedFiltersForm.vue'
 import type { CollectionSearchRequest } from '@/shared/interfaces/http/CollectionSearchRequest'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
+import type { label } from '@/shared/interfaces/http/CreateCollectionPayload.ts'
 
 const userStore = useUserStore()
 const catalogStore = useCatalogStore()
@@ -508,6 +509,22 @@ const fetchUserCollectionCatalog = async () => {
             :value="toUpper(getAccessStatus(data))"
             :severity="getStatusColor(getAccessStatus(data))"
           />
+        </template>
+      </Column>
+      <Column field="labels" header="Labels">
+        <template #body="{ data }">
+          <div class="flex flex-wrap items-start gap-1">
+            <template v-if="data.labels?.length">
+              <Tag
+                v-for="label in data.labels"
+                :key="label.value"
+                :value="label.value"
+                :severity="label.color"
+              />
+            </template>
+
+            <Tag v-else value="No Labels" severity="secondary" />
+          </div>
         </template>
       </Column>
       <!-- <Column field="storage_type" header="Storage Env">

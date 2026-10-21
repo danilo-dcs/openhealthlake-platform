@@ -20,3 +20,17 @@ export type PropertyName =
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
+export const labelColors: Record<string, string> = {
+  red: '#EF4444',
+  orange: '#F97316',
+  amber: '#F59E0B',
+  green: '#22C55E',
+  teal: '#14B8A6',
+  blue: '#3B82F6',
+  indigo: '#6366F1',
+  violet: '#8B5CF6',
+  pink: '#EC4899',
+  slate: '#64748B',
+};
+
+export const defaultLabels = ["cleaning", "cleanned", "harmonising", "hamonised", "static", "shared"]

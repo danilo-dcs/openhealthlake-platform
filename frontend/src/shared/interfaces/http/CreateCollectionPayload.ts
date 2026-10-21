@@ -1,3 +1,8 @@
+export interface label {
+  value: string,
+  color: string
+}
+
 export interface CreateCollectionPayload {
   user_id?: string
   credential_id?: string
@@ -8,4 +13,5 @@ export interface CreateCollectionPayload {
   collection_description?: string
   public?: boolean
   secret?: boolean
+  labels?: label[]
 }
