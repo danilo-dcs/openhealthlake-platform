@@ -3,17 +3,17 @@
 set -eu
 
 echo "Checking whether bucket '${COUCHBASE_BUCKET}' is already initialized"
-if curl --fail --silent \
+if curl --fail --silent --show-error \
   --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" \
   "http://${COUCHBASE_HOST}:8091/pools/default/buckets" \
-  >/dev/null; then
+  | grep -Fq "\"name\":\"${COUCHBASE_BUCKET}\""; then
   echo "Bucket '${COUCHBASE_BUCKET}' already exists; skipping Couchbase initialization"
   exit 0
 fi
 
 echo "Creating Cluster"
 
-curl --fail -X POST http://${COUCHBASE_HOST}:8091/clusterInit \
+curl --fail -X POST "http://${COUCHBASE_HOST}:8091/clusterInit" \
   -d clusterName=OpenHealthLakeCluster \
   -d hostname=${COUCHBASE_NODE_HOSTNAME} \
   -d username=${COUCHBASE_USER} \
@@ -35,13 +35,13 @@ sleep 10
 # curl -u admin:admin1234 -X POST http://${COUCHBASE_HOST}:8091/settings/indexes \
 #   -d 'storageMode=plasma'
 
-echo "$(curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} http://localhost:8091/settings/indexes)"
+echo "$(curl --fail --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" "http://${COUCHBASE_HOST}:8091/settings/indexes")"
 
 echo "Creating Bucket"
 
 # CREATING BUCKET
 sleep 15
-curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8091/pools/default/buckets \
+curl --fail --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" -X POST "http://${COUCHBASE_HOST}:8091/pools/default/buckets" \
   -d name=${COUCHBASE_BUCKET} \
   -d ramQuotaMB=$((COUCHBASE_TOTAL_MEMORY_QUOTA * 3 / 4)) \
   -d bucketType=couchbase
@@ -50,13 +50,13 @@ echo "Creating Scopes"
 
 # CREATING SCOPES
 sleep 10
-curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8091/pools/default/buckets/lakehouse/scopes \
+curl --fail --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" -X POST "http://${COUCHBASE_HOST}:8091/pools/default/buckets/${COUCHBASE_BUCKET}/scopes" \
   -d name=catalogs
 
-curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8091/pools/default/buckets/lakehouse/scopes \
+curl --fail --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" -X POST "http://${COUCHBASE_HOST}:8091/pools/default/buckets/${COUCHBASE_BUCKET}/scopes" \
   -d name=users
 
-curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8091/pools/default/buckets/lakehouse/scopes \
+curl --fail --user "${COUCHBASE_USER}:${COUCHBASE_PASSWORD}" -X POST "http://${COUCHBASE_HOST}:8091/pools/default/buckets/${COUCHBASE_BUCKET}/scopes" \
   -d name=credentials
 
 echo "Creating Collections"

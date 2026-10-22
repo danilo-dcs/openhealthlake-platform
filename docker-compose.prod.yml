@@ -65,7 +65,7 @@ services:
       couchbase:
         condition: service_healthy
     environment:
-      COUCHBASE_HOST: ${COUCHBASE_HOST}
+      COUCHBASE_HOST: localhost
       COUCHBASE_NODE_HOSTNAME: ohl-couchbase.local
       COUCHBASE_USER: ${COUCHBASE_USER}
       COUCHBASE_PASSWORD: ${COUCHBASE_PASSWORD}
