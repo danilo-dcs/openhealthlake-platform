@@ -2,7 +2,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
-from shared.models.catalog import CouchbaseCatalogCollectionModel
+from shared.models.catalog import CouchbaseCatalogCollectionModel, Label
 from shared.models.visas import VisaModel
 
 
@@ -14,10 +14,6 @@ FileCategory = Literal["structured", "unstructured"]
 
 FileProcessingLevel = Literal["raw", "processed", "curated"]
 
-class Labels(BaseModel):
-    value: str 
-    color: str
-
 class UploadFileRequestPayload(BaseModel):
     collection_catalog_id: str 
     file_name: str 
@@ -27,7 +23,7 @@ class UploadFileRequestPayload(BaseModel):
     public: Optional[bool] = False
     processing_level: Optional[FileProcessingLevel] = "raw"
     file_description: Optional[str] = None
-    labels: Optional[List[Labels]] = []
+    labels: Optional[List[Label]] = []
 
 class DownloadFileRequestPayload(BaseModel):
     catalog_file_id: str
@@ -39,7 +35,7 @@ class CreateCollectionPayload(BaseModel):
     collection_description: Optional[str] = None
     public: Optional[bool] = False
     secret: Optional[bool] = False
-    labels: Optional[List[Labels]] = []
+    labels: Optional[List[Label]] = []
 
 class CreateCollectionResponse(BaseModel):
     catalog_record: CouchbaseCatalogCollectionModel

@@ -12,7 +12,7 @@ FileCategory = Literal["structured", "unstructured"]
 
 CatalogType = Literal["files", "collections"]
 
-class Labels(BaseModel):
+class Label(BaseModel):
     value: str 
     color: str
 
@@ -32,7 +32,7 @@ class CatalogFileBaseModel(BaseModel):
     expires_at: Optional[int] = None
     file_version: Optional[int] = None
     public: Optional[bool] = False
-    labels: Optional[list[Labels]] = []
+    labels: Optional[List[Label]] = []
 
 class CatalogCollectionBaseModel(BaseModel):
     collection_name: Optional[str] = None
@@ -44,7 +44,7 @@ class CatalogCollectionBaseModel(BaseModel):
     collection_description: Optional[str] = None
     public: Optional[bool] = False
     secret: Optional[bool] = False
-    labels: Optional[list[Labels]] = []
+    labels: Optional[List[Label]] = []
 
 class CouchbaseCatalogFileModel(CatalogFileBaseModel):
     id: Optional[str] = None

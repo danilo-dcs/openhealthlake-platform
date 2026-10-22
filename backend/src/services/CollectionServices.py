@@ -82,7 +82,8 @@ class CollectionServices:
             inserted_at=inserted_at,
             collection_description=payload.collection_description,
             public=payload.public if payload.public else False,
-            secret=payload.secret if payload.secret else False
+            secret=payload.secret if payload.secret else False,
+            labels=payload.labels
         )
 
         catalog_item = await catalogServices.create_catalog_record(payload=catalog_record_payload, collection_name="collections")
