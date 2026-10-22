@@ -519,7 +519,8 @@ const fetchUserCollectionCatalog = async () => {
                 v-for="label in data.labels"
                 :key="label.value"
                 :value="label.value"
-                :severity="label.color"
+                :style="{ backgroundColor: label.color }"
+                class="text-white"
               />
             </template>
 
