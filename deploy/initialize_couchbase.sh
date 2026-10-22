@@ -102,5 +102,3 @@ curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}
 curl -u ${COUCHBASE_USER}:${COUCHBASE_PASSWORD} -X POST http://${COUCHBASE_HOST}:8093/query/service \
   -d 'statement=CREATE PRIMARY INDEX ON `lakehouse`.`users`.`access_requests`'
 
-
-exit 0
