@@ -39,6 +39,7 @@ class CreateCollectionPayload(BaseModel):
     collection_description: Optional[str] = None
     public: Optional[bool] = False
     secret: Optional[bool] = False
+    labels: Optional[List[Labels]] = []
 
 class CreateCollectionResponse(BaseModel):
     catalog_record: CouchbaseCatalogCollectionModel

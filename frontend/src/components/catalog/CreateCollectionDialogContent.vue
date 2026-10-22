@@ -150,7 +150,7 @@ const saveCollection = async () => {
     bucket_name: '',
     public: false,
     secret: false,
-    labels: []
+    labels: [] as Label[]
   }
 }
 
