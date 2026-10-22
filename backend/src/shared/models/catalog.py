@@ -2,7 +2,7 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel
 
-from backend.src.shared.models.storage import Labels
+from shared.models.storage import Labels
 
 FileStatus = Literal["ready", "processing", "uploading", "deleted"]
 
