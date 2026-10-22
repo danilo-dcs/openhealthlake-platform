@@ -1,5 +1,6 @@
 import json
 import httpx
+import logging
 
 from shared.models.env import EnvSettings
 
@@ -22,6 +23,8 @@ class CouchbaseRepository:
         self.base_url = f"http://{self.host}"
 
     async def __request_handler__(self, url: str, method: str, **kwargs) -> dict:
+        logger = logging.getLogger(__name__)
+        
         async with httpx.AsyncClient() as client:
             response = await client.request(
                 method=method,
@@ -29,6 +32,9 @@ class CouchbaseRepository:
                 auth=self.auth, 
                 **kwargs
             )
+
+        if response.is_error:
+            logger.error("Couchbase request failed (%s): %s", response.status_code, response.text)
 
         response.raise_for_status()
 

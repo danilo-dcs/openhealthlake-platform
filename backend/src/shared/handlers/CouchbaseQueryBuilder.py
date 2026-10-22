@@ -32,21 +32,31 @@ class CouchbaseQueryBuilder:
         self.limit: Union[int, None] = None
         self.offset_value: Union[int, None] = None
         self.order_by: Union[str, None] = None
-    
+
+
+    def _quote_identifier(self, identifier: str) -> str:
+        identifier = identifier.strip()
+        if identifier == "*":
+            return identifier
+        if identifier.startswith("`") and identifier.endswith("`"):
+            return identifier
+        return ".".join(f"`{part.strip('`')}`" for part in identifier.split("."))
 
     def select(self, fields: Union[List[str], str] = "*", count: bool = False):
-        """
-        Specify the fields to be selected in the query.
-        Default is all fields ('*').
-        """
+        """Specify the fields to select. Defaults to all fields."""
         if count:
             self.select_fields = "COUNT(*) AS count"
             return self
-        
+
         if isinstance(fields, list):
-            self.select_fields = ", ".join(fields)
+            self.select_fields = ", ".join(
+                self._quote_identifier(field) for field in fields
+            )
         else:
-            self.select_fields = fields
+            self.select_fields = (
+                fields if fields.strip() == "*" else self._quote_identifier(fields)
+            )
+
         return self
 
     def where(self, field: str, op: Operator, value: Any):
@@ -54,9 +64,9 @@ class CouchbaseQueryBuilder:
         Add filtering conditions to the query.
         """
         if isinstance(value, str):
-            self.filters.append(f"{field} {op} '{value}'")
+            self.filters.append(f"`{field}` {op} '{value}'")
         else:
-            self.filters.append(f"{field} {op} {value}")
+            self.filters.append(f"`{field}` {op} {value}")
         return self
     
     def ilike(self, field: str, value:str):
@@ -64,9 +74,9 @@ class CouchbaseQueryBuilder:
         Add filtering conditions to the query.
         """
         if isinstance(value, str):
-            self.filters.append(f"LOWER({field}) LIKE '%{value.lower()}%'")
+            self.filters.append(f"LOWER(`{field}`) LIKE '%{value.lower()}%'")
         else:
-            self.filters.append(f"LOWER({field}) LIKE '%'")
+            self.filters.append(f"LOWER(`{field}`) LIKE '%'")
         return self
     
     def where_any(self, target: str, in_filed: str, op: Operator, value: Any, satisfies=None):
@@ -77,9 +87,9 @@ class CouchbaseQueryBuilder:
             satisfies = target
 
         if isinstance(value, str):
-            self.filters.append(f"ANY {target} IN {in_filed} SATISFIES {satisfies} {op} '{value}' END")
+            self.filters.append(f"ANY {target} IN `{in_filed}` SATISFIES {satisfies} {op} '{value}' END")
         else:
-            self.filters.append(f"ANY {target} IN {in_filed} SATISFIES {satisfies} {op} {value} END")
+            self.filters.append(f"ANY {target} IN `{in_filed}` SATISFIES {satisfies} {op} {value} END")
         return self
     
     def where_in(self, target: str, in_values: list[Any]):
