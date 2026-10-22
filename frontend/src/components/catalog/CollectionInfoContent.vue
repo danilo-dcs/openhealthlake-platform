@@ -13,7 +13,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 
 import type { CatalogCollectionRecord } from '@/shared/interfaces/http/CatalogCollectionResponse'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
-import { onMounted, ref, inject, watch, type Ref, computed } from 'vue'
+import { onMounted, ref, inject, type Ref, computed } from 'vue'
 import { useDialog } from 'primevue/usedialog'
 
 import { useUserStore } from '@/stores/userStore'

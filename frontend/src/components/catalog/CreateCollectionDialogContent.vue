@@ -7,10 +7,12 @@ import InputText from 'primevue/inputtext'
 import RadioButton from 'primevue/radiobutton'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
+import Chip from 'primevue/chip';
+
 import { Toast } from 'primevue'
 
 import { useToast } from 'primevue/usetoast'
-import type { CreateCollectionPayload } from '@/shared/interfaces/http/CreateCollectionPayload'
+import { type CreateCollectionPayload, type Label } from '@/shared/interfaces/http/CreateCollectionPayload'
 import { onMounted, ref, inject, type Ref } from 'vue'
 import type { GetBucketListResponse } from '@/shared/interfaces/http/GetBucketListResponse'
 
@@ -18,7 +20,8 @@ import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
-import { StorageOptions } from '@/shared/interfaces/types'
+import { defaultColors, StorageOptions } from '@/shared/interfaces/types'
+import { text } from 'stream/consumers'
 
 const userStore = useUserStore()
 
@@ -34,7 +37,7 @@ const newCollection = ref<CreateCollectionPayload>({
   bucket_name: '',
   public: false,
   secret: false,
-  labels: []
+  labels: [] as Label[]
 })
 
 const createCollectionLoadingBtn = ref<boolean>(false)
@@ -46,6 +49,13 @@ const storageTypes = ref<string[]>(StorageOptions)
 const bucketList = ref<GetBucketListResponse>()
 
 const toast = useToast()
+
+const newLabel = ref<Label>({
+  value: "",
+  color: ""
+})
+
+const colorOptions = ref<Record<string, string>>(defaultColors)
 
 // LIFECYCLE
 
@@ -60,11 +70,25 @@ onMounted(() => {
     bucket_name: '',
     public: false,
     secret: false,
-    labels: []
+    labels: [] as Label[]
   }
 })
 
 // ACTIONS
+
+const addLabel = () => {
+  newCollection.value.labels?.push(newLabel.value)
+
+  newLabel.value = {
+    value: "",
+    color: ""
+  }
+}
+
+const removeLabel = (index: number) => {
+  newCollection.value.labels?.splice(index, 1);
+}
+
 const closeDialog = () => {
   dialogRef.value.close({
     refresh: true,
@@ -238,6 +262,76 @@ const fetchStorageBucketList = async () => {
       <small v-if="submitted && !newCollection.bucket_name" class="text-red-500"
         >Storage Bucket is required.</small
       >
+    </div>
+
+    <Divider />
+
+    <span class="mb-4 block font-bold">Add Labels</span>
+
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-5 flex items-center">
+        <InputText
+          v-model="newLabel.value"
+          name="name"
+          placeholder="Type the label"
+          class="w-full"
+        />
+      </div>
+
+      <div class="col-span-5 flex items-center">
+        <Select
+          v-model="newLabel.color"
+          name="color"
+          :options="Object.keys(colorOptions)"
+          placeholder="Choose a color"
+          class="w-full"
+        >
+          <template #value="{ value }">
+            <span
+              v-if="value"
+              class="inline-block rounded px-2 py-1 text-white"
+              :style="{ backgroundColor: colorOptions[value] }"
+            >
+              {{ value }}
+            </span>
+            <span v-else class="text-gray-500">Choose a color</span>
+          </template>
+
+          <template #option="{ option }">
+            <span
+              class="inline-block rounded px-2 py-1 text-white"
+              :style="{ backgroundColor: colorOptions[option] }"
+            >
+              {{ option }}
+            </span>
+          </template>
+        </Select>
+      </div>
+
+      <div class="col-span-2 flex items-center">
+        <Button
+          type="button"
+          icon="pi pi-plus"
+          aria-label="Add label"
+          @click="addLabel"
+        />
+      </div>
+    </div>
+
+    <div id="label-items" class="mt-4">
+      <span class="mb-2 block font-bold">Labels:</span>
+
+      <div class="flex flex-wrap items-start gap-2">
+        <Chip
+          v-for="(item, index) in newCollection.labels"
+          :key="`${item.value}-${index}`"
+          :label="item.value"
+          removable
+          class="text-white"
+          :style="{ backgroundColor: item.color }"
+          @remove="removeLabel(index)"
+        />
+      </div>
     </div>
 
     <Divider />

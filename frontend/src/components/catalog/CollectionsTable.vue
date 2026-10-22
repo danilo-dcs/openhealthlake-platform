@@ -44,7 +44,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import AdvancedFiltersForm from './AdvancedFiltersForm.vue'
 import type { CollectionSearchRequest } from '@/shared/interfaces/http/CollectionSearchRequest'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
-import type { label } from '@/shared/interfaces/http/CreateCollectionPayload.ts'
+import type { Label } from '@/shared/interfaces/http/CreateCollectionPayload.ts'
 
 const userStore = useUserStore()
 const catalogStore = useCatalogStore()
@@ -537,6 +537,16 @@ const fetchUserCollectionCatalog = async () => {
       <Column class="w-24 !text-end" header="Actions">
         <template #body="{ data }">
           <div class="flex justify-end gap-2">
+            <!-- <Button
+              v-if="user_id && data.inserted_by.includes(user_id)"
+              id="edit-collection-btn"
+              icon="pi pi-pen"
+              @click="openEditCollectionDialog(data)"
+              severity="secondary"
+              size="small"
+              rounded
+              v-tooltip.bottom="'Edit Collection'"
+              /> -->
             <Button
               id="info-btn"
               icon="pi pi-folder-open"
@@ -573,7 +583,7 @@ const fetchUserCollectionCatalog = async () => {
             />
             <Button
               v-if="user_id && data.inserted_by.includes(user_id)"
-              id="grant-access-btn"
+              id="delete-collection-btn"
               icon="pi pi-trash"
               @click="openDeleteCollectionDialog(data)"
               severity="secondary"

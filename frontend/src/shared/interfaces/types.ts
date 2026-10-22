@@ -20,7 +20,7 @@ export type PropertyName =
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-export const labelColors: Record<string, string> = {
+export const defaultColors: Record<string, string> = {
   red: '#EF4444',
   orange: '#F97316',
   amber: '#F59E0B',

@@ -17,16 +17,13 @@ import { onMounted, ref, inject, type Ref, computed } from 'vue'
 import type { UploadFileRequestPayload } from '@/shared/interfaces/http/UploadFileRequestPayload'
 import type { UploadFileResponse } from '@/shared/interfaces/http/UploadFileResponse'
 import { useRouter } from 'vue-router'
-import type { FileCategory, ProcessingLevel } from '@/shared/interfaces/types'
+import { defaultColors, type FileCategory, type ProcessingLevel } from '@/shared/interfaces/types'
 
-import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
 import type { CatalogFileRecord } from '@/shared/interfaces/http/CatalogFileResponse'
-
-const userStore = useUserStore()
+import type { Label } from '@/shared/interfaces/http/CreateCollectionPayload'
 
 const toast = useToast()
-const router = useRouter()
 
 const dialogRef = inject('dialogRef') as Ref<DynamicDialogInstance>
 
@@ -54,12 +51,16 @@ const formValues = ref<UploadFileRequestPayload>({
   file_size: 0,
   processing_level: 'raw' as ProcessingLevel,
   file_description: '',
-  labels: []
+  labels: [] as Label[]
 })
 
-const closeDialog = () => {
-  dialogRef.value.close()
-}
+const newLabel = ref<Label>({
+  value: "",
+  color: ""
+})
+
+const colorOptions = ref<Record<string, string>>(defaultColors)
+
 
 // LIFECYCLE
 onMounted(() => {
@@ -68,6 +69,23 @@ onMounted(() => {
 })
 
 // ACTIONS
+
+const closeDialog = () => {
+  dialogRef.value.close()
+}
+
+const addLabel = () => {
+  formValues.value.labels?.push(newLabel.value)
+
+  newLabel.value = {
+    value: "",
+    color: ""
+  }
+}
+
+const removeLabel = (index: number) => {
+  formValues.value.labels?.splice(index, 1);
+}
 
 const getFileCategoryExamples = (category: FileCategory | undefined): string => {
   return category === 'structured'
@@ -289,6 +307,78 @@ const uploadFile = async (file: File, url: string, method: string): Promise<void
       <label for="version" class="block font-bold mb-3">File Version</label>
       <InputNumber id="version" v-model="formValues.file_version" required autofocus fluid />
     </div>
+
+    <Divider />
+
+    <span class="mb-4 block font-bold">Add Labels</span>
+
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-5 flex items-center">
+        <InputText
+          v-model="newLabel.value"
+          name="name"
+          placeholder="Type the label"
+          class="w-full"
+        />
+      </div>
+
+      <div class="col-span-5 flex items-center">
+        <Select
+          v-model="newLabel.color"
+          name="color"
+          :options="Object.keys(colorOptions)"
+          placeholder="Choose a color"
+          class="w-full"
+        >
+          <template #value="{ value }">
+            <span
+              v-if="value"
+              class="inline-block rounded px-2 py-1 text-white"
+              :style="{ backgroundColor: colorOptions[value] }"
+            >
+              {{ value }}
+            </span>
+            <span v-else class="text-gray-500">Choose a color</span>
+          </template>
+
+          <template #option="{ option }">
+            <span
+              class="inline-block rounded px-2 py-1 text-white"
+              :style="{ backgroundColor: colorOptions[option] }"
+            >
+              {{ option }}
+            </span>
+          </template>
+        </Select>
+      </div>
+
+      <div class="col-span-2 flex items-center">
+        <Button
+          type="button"
+          icon="pi pi-plus"
+          aria-label="Add label"
+          @click="addLabel"
+        />
+      </div>
+    </div>
+
+    <div id="label-items" class="mt-4">
+      <span class="mb-2 block font-bold">Labels:</span>
+
+      <div class="flex flex-wrap items-start gap-2">
+        <Chip
+          v-for="(item, index) in formValues.labels"
+          :key="`${item.value}-${index}`"
+          :label="item.value"
+          removable
+          class="text-white"
+          :style="{ backgroundColor: item.color }"
+          @remove="removeLabel(index)"
+        />
+      </div>
+    </div>
+
+    <Divider />
 
     <div>
       <label for="description" class="block font-bold mb-3">Description (Optional)</label>

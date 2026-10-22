@@ -1,4 +1,5 @@
 import type { FileCategory, ProcessingLevel } from '@/shared/interfaces/types'
+import type { Label } from './CreateCollectionPayload'
 
 export interface UploadFileRequestPayload {
   collection_catalog_id: string
@@ -9,5 +10,5 @@ export interface UploadFileRequestPayload {
   public?: boolean
   processing_level?: ProcessingLevel
   file_description?: string
-  labels: string[]
+  labels: Label[]
 }

@@ -1,4 +1,4 @@
-export interface label {
+export interface Label {
   value: string,
   color: string
 }
@@ -13,5 +13,5 @@ export interface CreateCollectionPayload {
   collection_description?: string
   public?: boolean
   secret?: boolean
-  labels?: label[]
+  labels?: Label[]
 }
