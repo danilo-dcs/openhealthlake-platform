@@ -317,7 +317,7 @@ const uploadFile = async (file: File, url: string, method: string): Promise<void
         <InputText
           v-model="newLabel.value"
           name="name"
-          placeholder="Type the label"
+          placeholder="label value"
           class="w-full"
         />
       </div>
@@ -327,7 +327,7 @@ const uploadFile = async (file: File, url: string, method: string): Promise<void
           v-model="newLabel.color"
           name="color"
           :options="Object.keys(colorOptions)"
-          placeholder="Choose a color"
+          placeholder="label color"
           class="w-full"
         >
           <template #value="{ value }">
@@ -338,7 +338,7 @@ const uploadFile = async (file: File, url: string, method: string): Promise<void
             >
               {{ value }}
             </span>
-            <span v-else class="text-gray-500">Choose a color</span>
+            <span v-else class="text-gray-500">label color</span>
           </template>
 
           <template #option="{ option }">
@@ -365,7 +365,7 @@ const uploadFile = async (file: File, url: string, method: string): Promise<void
     <div id="label-items" class="mt-4">
       <span class="mb-2 block font-bold">Labels:</span>
 
-      <div class="flex flex-wrap items-start gap-2">
+      <div v-if="formValues.labels?.length" class="flex flex-wrap items-start gap-2">
         <Chip
           v-for="(item, index) in formValues.labels"
           :key="`${item.value}-${index}`"
@@ -375,6 +375,9 @@ const uploadFile = async (file: File, url: string, method: string): Promise<void
           :style="{ backgroundColor: item.color }"
           @remove="removeLabel(index)"
         />
+      </div>
+      <div v-else class="flex justify-center">
+        <Chip  label="No labels created" class="font" />
       </div>
     </div>
 

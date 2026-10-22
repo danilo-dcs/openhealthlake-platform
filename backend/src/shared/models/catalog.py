@@ -55,7 +55,7 @@ class CouchbaseCatalogCollectionModel(CatalogCollectionBaseModel):
 class CatalogFilter(BaseModel):
     property_name: str
     operator: FilterOperators
-    property_value: str | int | float
+    property_value: str | int | float | None
 
 class CatalogFilterPayload(BaseModel):
     filters: List[CatalogFilter]

@@ -52,7 +52,7 @@ class CollectionServices:
             CatalogFilter(
                 property_name="bucket",
                 operator="=",
-                property_value=payload.bucket_name if payload.namenode_address == 'hdfs' else payload.bucket_name
+                property_value=payload.bucket_name,
             ),
             CatalogFilter(
                 property_name="status",
@@ -76,7 +76,7 @@ class CollectionServices:
         catalog_record_payload = CatalogCollectionBaseModel(
             collection_name=payload.collection_name,
             storage_type=payload.storage_type,
-            bucket=payload.bucket_name if payload.namenode_address == 'hdfs' else payload.bucket_name,
+            bucket=payload.bucket_name,
             status='ready',
             inserted_by=inserted_by,
             inserted_at=inserted_at,
@@ -96,7 +96,7 @@ class CollectionServices:
         visa_item = await visaServices.create_visa(payload=visa_payload)
 
         if not visa_item:
-            await self.delete_collection(catalog_collection_id=catalog_item.id)
+            await catalogServices.delete_collection_record(document_id=catalog_item.id, user_id=user.id)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
                 detail="Unable to create visa for new collection"

@@ -21,7 +21,6 @@ import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
 import { defaultColors, StorageOptions } from '@/shared/interfaces/types'
-import { text } from 'stream/consumers'
 
 const userStore = useUserStore()
 
@@ -33,7 +32,6 @@ const newCollection = ref<CreateCollectionPayload>({
   collection_name: '',
   collection_description: '',
   storage_type: '',
-  namenode_address: '',
   bucket_name: '',
   public: false,
   secret: false,
@@ -66,7 +64,6 @@ onMounted(() => {
     collection_name: '',
     collection_description: '',
     storage_type: '',
-    namenode_address: '',
     bucket_name: '',
     public: false,
     secret: false,
@@ -102,7 +99,7 @@ const hideCollectionDialog = () => {
   submitted.value = false
 }
 
-const mapBucketList = (storageType: string): string[] => {
+const mapBucketList = (storageType: string | undefined): string[] => {
   return (
     bucketList.value?.bucket_list
       .filter((item) => item.storage_type === storageType)
@@ -150,7 +147,6 @@ const saveCollection = async () => {
     collection_name: '',
     collection_description: '',
     storage_type: '',
-    namenode_address: '',
     bucket_name: '',
     public: false,
     secret: false,
@@ -230,24 +226,7 @@ const fetchStorageBucketList = async () => {
       >
     </div>
 
-    <div v-if="newCollection.storage_type === 'hdfs' && !!newCollection.storage_type">
-      <label for="location" class="block font-bold mb-3">Storage Bucket</label>
-      <Select
-        id="location"
-        v-model.trim="newCollection.namenode_address"
-        required
-        autofocus
-        :invalid="submitted && !newCollection.namenode_address"
-        :options="mapBucketList(newCollection.storage_type)"
-        placeholder="Select a Storage Bucket"
-        fluid
-      />
-      <small v-if="submitted && !newCollection.namenode_address" class="text-red-500"
-        >Storage Bucket is required.</small
-      >
-    </div>
-
-    <div v-else-if="!!newCollection.storage_type">
+    <div>
       <label for="location" class="block font-bold mb-3">Storage Bucket</label>
       <Select
         id="location"
@@ -273,7 +252,7 @@ const fetchStorageBucketList = async () => {
         <InputText
           v-model="newLabel.value"
           name="name"
-          placeholder="Type the label"
+          placeholder="label value"
           class="w-full"
         />
       </div>
@@ -282,9 +261,9 @@ const fetchStorageBucketList = async () => {
         <Select
           v-model="newLabel.color"
           name="color"
-          :options="Object.keys(colorOptions)"
-          placeholder="Choose a color"
+          placeholder="label color"
           class="w-full"
+          :options="Object.keys(colorOptions)"
         >
           <template #value="{ value }">
             <span
@@ -294,7 +273,7 @@ const fetchStorageBucketList = async () => {
             >
               {{ value }}
             </span>
-            <span v-else class="text-gray-500">Choose a color</span>
+            <span v-else class="text-gray-500">label color</span>
           </template>
 
           <template #option="{ option }">
@@ -321,16 +300,19 @@ const fetchStorageBucketList = async () => {
     <div id="label-items" class="mt-4">
       <span class="mb-2 block font-bold">Labels:</span>
 
-      <div class="flex flex-wrap items-start gap-2">
+      <div v-if="newCollection.labels?.length" class="flex flex-wrap items-start gap-2">
         <Chip
           v-for="(item, index) in newCollection.labels"
           :key="`${item.value}-${index}`"
           :label="item.value"
           removable
           class="text-white"
-          :style="{ backgroundColor: item.color }"
+          :style="{ backgroundColor: colorOptions[item.color] ?? item.color }"
           @remove="removeLabel(index)"
         />
+      </div>
+      <div v-else class="flex justify-center">
+        <Chip  label="No labels created" class="font" />
       </div>
     </div>
 

@@ -18,10 +18,7 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
-
 class CatalogServices:
-    
-
     def __init__(self) -> None:
         self.scope = "catalogs"
 
