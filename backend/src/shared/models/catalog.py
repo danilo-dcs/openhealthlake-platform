@@ -2,8 +2,6 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel
 
-from shared.models.storage import Labels
-
 FileStatus = Literal["ready", "processing", "uploading", "deleted"]
 
 CatalogProcessingLevelFilter = Literal["raw", "processed", "curated"]
@@ -13,6 +11,10 @@ FilterOperators = Literal["=",">","<", ">=", "<=", '*', "!="]
 FileCategory = Literal["structured", "unstructured"]
 
 CatalogType = Literal["files", "collections"]
+
+class Labels(BaseModel):
+    value: str 
+    color: str
 
 class CatalogFileBaseModel(BaseModel):
     file_name: Optional[str] = None
