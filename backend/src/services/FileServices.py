@@ -207,7 +207,8 @@ class FileServices:
         storage_client = StorageClientFactory.create_client(
             storage_type=file_record.storage_type, 
             bucket=file_record.file_bucket,
-            credentials=decoded_credential
+            credentials=decoded_credential,
+            minio_endpoint_use="internal",
         )
         
         try:

@@ -411,7 +411,7 @@ class CatalogServices:
             storage_type=file_record.storage_type,
             bucket=file_record.file_bucket,
             credentials=decrypted_credential,
-            # minio_endpoint_use="internal",
+            minio_endpoint_use="internal",
         )
 
         try:

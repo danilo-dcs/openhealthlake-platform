@@ -3,7 +3,9 @@
 <script setup lang="ts">
 import Toast from 'primevue/toast'
 import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import Chip from 'primevue/chip'
 import Divider from 'primevue/divider'
 import Button from 'primevue/button'
 import ButtonGroup from 'primevue/buttongroup'
@@ -16,7 +18,6 @@ import { useToast } from 'primevue/usetoast'
 import { onMounted, ref, inject, type Ref, computed } from 'vue'
 import type { UploadFileRequestPayload } from '@/shared/interfaces/http/UploadFileRequestPayload'
 import type { UploadFileResponse } from '@/shared/interfaces/http/UploadFileResponse'
-import { useRouter } from 'vue-router'
 import { defaultColors, type FileCategory, type ProcessingLevel } from '@/shared/interfaces/types'
 
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
@@ -160,6 +161,8 @@ const uploadFileAction = async (): Promise<void> => {
         life: 6000,
       })
     }
+
+    dialogRef.value.close({ refresh: true })
 
   } catch (error) {
     toast.add({

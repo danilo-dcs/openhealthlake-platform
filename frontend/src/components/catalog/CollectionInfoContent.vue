@@ -12,7 +12,7 @@ import UploadFileContent from './UploadFileContent.vue'
 import { useCatalogStore } from '@/stores/catalogStore'
 
 import type { CatalogCollectionRecord } from '@/shared/interfaces/http/CatalogCollectionResponse'
-import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
+import type { DynamicDialogCloseOptions, DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 import { onMounted, ref, inject, type Ref, computed } from 'vue'
 import { useDialog } from 'primevue/usedialog'
 
@@ -33,6 +33,7 @@ const { collectionId = '' } = defineProps<{
 const user_id = computed(() => userStore.userId)
 
 const collection = ref<CatalogCollectionRecord>()
+const filesRefreshKey = ref(0)
 
 const closeDialog = () => {
   dialogRef.value.close()
@@ -60,11 +61,17 @@ const getCollectionsTitle = computed(() => {
 })
 
 const openUploadFileDialog = (data: CatalogCollectionRecord) => {
+  filesRefreshKey.value = 0
+
   const dialogSpecs = {
     props: { ...dialogDefaultProps, header: 'Upload File' },
     templates: {},
     data: data,
-    onClose: () => {},
+    onClose: (options?: DynamicDialogCloseOptions) => {
+      if (options?.data?.refresh) {
+        filesRefreshKey.value += 1
+      }
+    },
   }
 
   const dialogRef = dialog.open(UploadFileContent, dialogSpecs)
@@ -146,7 +153,7 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
           <span class="hidden sm:inline">Upload File</span>
         </Button>
       </div> -->
-      <FilesTable :collectionId="collection?.id" />
+      <FilesTable :collectionId="collection?.id" :refreshKey="filesRefreshKey" />
     </div>
   </Panel>
 </template>

@@ -15,7 +15,7 @@ import { useDialog } from 'primevue/usedialog'
 
 import { FilterMatchMode } from '@primevue/core/api'
 
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, watch } from 'vue'
 
 import type { UserPassportResponse } from '@/shared/interfaces/http/UserVisasResponse'
 import type {
@@ -46,9 +46,13 @@ const router = useRouter()
 
 const store = useCatalogStore()
 
-const { collectionId = '' } = defineProps<{
+const props = withDefaults(defineProps<{
   collectionId?: string
-}>()
+  refreshKey?: number
+}>(), {
+  collectionId: '',
+  refreshKey: 0,
+})
 
 const catalogApiInfo = {
   files: {
@@ -103,6 +107,15 @@ const getStateColor = (state: string): string => {
 onMounted(() => {
   updateComponentData()
 })
+
+watch(
+  () => props.refreshKey,
+  async (refreshKey, previousRefreshKey) => {
+    if (refreshKey <= 0 || refreshKey === previousRefreshKey) return
+    tableLoading.value = true
+    await fetchFileCatalog()
+  },
+)
 
 const updateCurrentPage = (event: any) => {
   paginatorValue.value = Number(event?.page ?? 1) + 1
@@ -223,7 +236,7 @@ const fetchUserPassports = async () => {
 }
 
 const fetchFileCatalog = async () => {
-  if (!collectionId) {
+  if (!props.collectionId) {
     return []
   }
 
@@ -239,7 +252,7 @@ const fetchFileCatalog = async () => {
         {
           property_name: 'collection_id',
           operator: '=',
-          property_value: collectionId,
+          property_value: props.collectionId,
         },
       ],
       page_number: paginatorValue.value,
