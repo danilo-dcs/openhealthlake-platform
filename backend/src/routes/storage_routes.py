@@ -10,8 +10,8 @@ from starlette.formparsers import MultiPartParser
 from services.CollectionServices import CollectionServices
 from services.CredentialServices import CredentialServices
 from services.FileServices import FileServices
-from shared.models.catalog import CouchbaseCatalogFileModel
-from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, DownloadFileRequestPayload, DownloadFileRequestResponse, GetStorageBucketListResponse, UploadFileRequestPayload, UploadFileRequestResponse
+from shared.models.catalog import CouchbaseCatalogCollectionModel, CouchbaseCatalogFileModel
+from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, DownloadFileRequestPayload, DownloadFileRequestResponse, GetStorageBucketListResponse, UpdateCollectionPayload, UploadFileRequestPayload, UploadFileRequestResponse
 from routes.auth_routes import auth_oauth2_scheme
 
 
@@ -53,6 +53,27 @@ async def create_collections(
     result = await collection_services.create_collection(payload=payload, user_id=user_id)
     
     return result
+
+
+@router.patch(
+    "/collections/{collection_id}",
+    summary="Update a collection",
+    response_model=CouchbaseCatalogCollectionModel,
+    response_model_exclude_none=True,
+    response_model_exclude_unset=True,
+)
+async def update_collection(
+    collection_id: str,
+    request: Request,
+    payload: UpdateCollectionPayload,
+    _: str = Depends(auth_oauth2_scheme),
+) -> CouchbaseCatalogCollectionModel:
+    collection_services = CollectionServices()
+    return await collection_services.update_collection(
+        collection_id=collection_id,
+        payload=payload,
+        user_id=request.state.user,
+    )
 
 
 @router.post(

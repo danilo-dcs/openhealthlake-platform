@@ -145,17 +145,17 @@ class UserServices:
         mailingClient.add_subject(
             "Welcome to the Lakehouse Database"
         ).add_html_body(
-            f"""<h2>Hi {full_payload.name}</h2>. 
+            f"""<h2>Hi {full_payload.name}!</h2> 
             <br> 
-            <p>Your account has been successfully created in the Lakehouse Database</p>
+            <p>Your account has been successfully created in the OpenHealthLake platform</p>
             <p>To get started please see the 
             <a href="{settings.DOCUMENTATION_URL}">documentation</a> 
             or access the 
-            <a href="{settings.FRONTEND_URL}">lakehouse website.</a> </p>
+            <a href="{settings.FRONTEND_URL}">OpenHealthLake website.</a> </p>
             <br>
-            <p>Kind regards,</p>
+            <p>Our best regards,</p>
             <br>
-            <p>the Lakehouse Team</p>
+            <p>The OpenHealthLake Team</p>
             """
         )
         

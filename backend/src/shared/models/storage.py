@@ -37,6 +37,13 @@ class CreateCollectionPayload(BaseModel):
     secret: Optional[bool] = False
     labels: Optional[List[Label]] = []
 
+class UpdateCollectionPayload(BaseModel):
+    collection_name: Optional[str] = None
+    collection_description: Optional[str] = None
+    public: Optional[bool] = None
+    secret: Optional[bool] = None
+    labels: Optional[List[Label]] = None
+
 class CreateCollectionResponse(BaseModel):
     catalog_record: CouchbaseCatalogCollectionModel
     associated_visa: VisaModel

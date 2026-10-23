@@ -1,9 +1,81 @@
-from shared.models.catalog import CatalogCollectionBaseModel, CatalogFilter
-from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse
-from shared.models.visas import CreateVisaPayload
+from shared.models.catalog import CatalogCollectionBaseModel, CatalogFilter, CouchbaseCatalogCollectionModel
+from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, UpdateCollectionPayload
+from shared.models.visas import AssertedVisaModel, CreateVisaPayload
 from fastapi import HTTPException, status
 
 class CollectionServices:
+    async def update_collection(
+        self,
+        collection_id: str,
+        payload: UpdateCollectionPayload,
+        user_id: str,
+    ) -> CouchbaseCatalogCollectionModel:
+        from services.CatalogServices import CatalogServices
+        from services.VisasServices import VisaServices
+
+        catalog_services = CatalogServices()
+        collection = await catalog_services.get_by_id_api(
+            document_id=collection_id,
+            collection_name="collections",
+        )
+
+        if not collection or not collection.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+
+        if not collection.inserted_by or collection.inserted_by.split(":", 1)[0] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the collection owner can update this collection",
+            )
+
+        changes = payload.model_dump(exclude_unset=True)
+        old_name = collection.collection_name
+        new_name = changes.get("collection_name", collection.collection_name)
+
+        if new_name != old_name:
+            filters = [
+                CatalogFilter(property_name="collection_name", operator="=", property_value=new_name),
+                CatalogFilter(property_name="storage_type", operator="=", property_value=collection.storage_type),
+                CatalogFilter(property_name="bucket", operator="=", property_value=collection.bucket),
+                CatalogFilter(property_name="status", operator="!=", property_value="deleted"),
+            ]
+            matches = await catalog_services.get_by_filters(filters=filters)
+
+            if any(record.id != collection_id for record in matches.records):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"The collection {new_name} already exists in this storage location",
+                )
+
+        for field, value in changes.items():
+            setattr(collection, field, value)
+
+        await catalog_services.couchbaseRepo.upsert_document(
+            collection_name="collections",
+            key=collection_id,
+            value=collection.model_dump(exclude_none=True, exclude_unset=True),
+        )
+
+        if new_name != old_name or "collection_description" in changes:
+            visa_services = VisaServices()
+
+            visas = await visa_services.list_all()
+
+            visa_name = f"{collection_id}:{new_name}"
+            
+            old_visa = next((visa for visa in visas if visa.visaName == f"{collection_id}:{old_name}"), None)
+
+            if old_visa:
+                await visa_services.update_visa(AssertedVisaModel(
+                    id=old_visa.id,
+                    visaName=visa_name,
+                    visaIssuer=old_visa.visaIssuer,
+                    visaDescription=changes.get("collection_description", old_visa.visaDescription),
+                    visaSecret=old_visa.visaSecret,
+                ))
+
+        return collection
+
     async def create_collection(
         self,
         payload: CreateCollectionPayload,

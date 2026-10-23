@@ -30,6 +30,7 @@ import RequestAccessContent from '@/components/catalog/RequestAccessContent.vue'
 import InfoContent from '@/components/catalog/CollectionInfoContent.vue'
 import ControlAccessContent from '@/components/catalog/ControlAccessContent.vue'
 import DeleteCollectionContent from '@/components/catalog/DeleteCollectionContent.vue'
+import EditCollectionDialogContent from '@/components/catalog/EditCollectionDialogContent.vue'
 
 import type {
   CatalogCollectionRecord,
@@ -301,6 +302,26 @@ const openDeleteCollectionDialog = (data: CatalogCollectionRecord) => {
   const dialogRef = dialog.open(DeleteCollectionContent, dialogSpecs)
 }
 
+const openEditCollectionDialog = (data: CatalogCollectionRecord) => {
+  const dialogSpecs = {
+    props: {
+      ...dialogDefaultProps,
+      header: 'Edit Collection',
+      style: { width: '50vw' },
+    },
+    templates: {},
+    data,
+    onClose: async (options?: DynamicDialogCloseOptions) => {
+      if (options?.data?.refresh) {
+        await updateComponentData()
+        await nextTick()
+      }
+    },
+  }
+
+  dialog.open(EditCollectionDialogContent, dialogSpecs)
+}
+
 // const openUploadFileDialog = (data: CatalogCollectionRecord) => {
 //   const dialogSpecs = {
 //     props: { ...dialogDefaultProps, header: 'Upload File' },
@@ -538,16 +559,16 @@ const fetchUserCollectionCatalog = async () => {
       <Column class="w-24 !text-end" header="Actions">
         <template #body="{ data }">
           <div class="flex justify-end gap-2">
-            <!-- <Button
+            <Button
               v-if="user_id && data.inserted_by.includes(user_id)"
               id="edit-collection-btn"
-              icon="pi pi-pen"
+              icon="pi pi-pencil"
               @click="openEditCollectionDialog(data)"
               severity="secondary"
               size="small"
               rounded
               v-tooltip.bottom="'Edit Collection'"
-              /> -->
+            />
             <Button
               id="info-btn"
               icon="pi pi-folder-open"
