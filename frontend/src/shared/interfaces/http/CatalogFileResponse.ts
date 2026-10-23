@@ -1,3 +1,6 @@
+import type { FileCategory } from '@/shared/interfaces/types'
+import type { Label } from '@/shared/interfaces/http/CreateCollectionPayload'
+
 export interface CatalogFileRecord {
   file_name: string
   file_size: number
@@ -8,12 +11,12 @@ export interface CatalogFileRecord {
   inserted_by: string
   inserted_at: number
   file_description: string
-  file_category: string
+  file_category: FileCategory
   file_status: string
   expires_at: number
   file_version: number
   public: false
-  labels: string[]
+  labels: Label[]
   id: string
 }
 

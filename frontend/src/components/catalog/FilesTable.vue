@@ -25,6 +25,7 @@ import type {
 import moment from 'moment'
 import FileInfoContent from '@/components/catalog/FileInfoContent.vue'
 import DeleteFileContent from '@/components/catalog/DeleteFileContent.vue'
+import EditFileDialogContent from '@/components/catalog/EditFileDialogContent.vue'
 
 import type { DownloadFilePayload } from '@/shared/interfaces/http/DownloadFilePayload'
 import type { DownloadFileRequesResponse } from '@/shared/interfaces/http/DownloadFileRequesResponse'
@@ -35,6 +36,7 @@ import { useCatalogStore } from '@/stores/catalogStore'
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
+import { defaultColors } from '@/shared/interfaces/types'
 
 const userStore = useUserStore()
 
@@ -109,9 +111,7 @@ const updateCurrentPage = (event: any) => {
 }
 
 const updateComponentData = async () => {
-  // fetchUserFileCatalog()
-  fetchFileCatalog()
-  fetchUserPassports()
+  await Promise.all([fetchFileCatalog(), fetchUserPassports()])
 }
 
 // ACTIONS
@@ -130,6 +130,22 @@ const openDeleteFileDialog = (data: CatalogFileRecord) => {
   }
 
   const dialogRef = dialog.open(DeleteFileContent, dialogSpecs)
+}
+
+const openEditFileDialog = (data: CatalogFileRecord) => {
+  const dialogSpecs = {
+    props: { ...dialogDefaultProps, header: 'Edit File Details' },
+    templates: {},
+    data,
+    onClose: async (options?: DynamicDialogCloseOptions) => {
+      if (options?.data?.refresh) {
+        await updateComponentData()
+        await nextTick()
+      }
+    },
+  }
+
+  dialog.open(EditFileDialogContent, dialogSpecs)
 }
 
 const extractUserCollections = (passport: UserPassportResponse): string[] => {
@@ -471,7 +487,8 @@ const streamDownloadToFile = async (url: string, suggestedFileName: string): Pro
                 v-for="label in data.labels"
                 :key="label.value"
                 :value="label.value"
-                :severity="label.color"
+                :style="{ backgroundColor: defaultColors[label.color] ?? label.color }"
+                class="text-white"
               />
             </template>
 
@@ -482,6 +499,16 @@ const streamDownloadToFile = async (url: string, suggestedFileName: string): Pro
       <Column class="w-24 !text-end" header="Actions">
         <template #body="{ data }">
           <div class="flex justify-end gap-2">
+            <Button
+              v-if="user_id && data.inserted_by.includes(user_id)"
+              id="edit-file-btn"
+              icon="pi pi-pencil"
+              @click="openEditFileDialog(data)"
+              severity="secondary"
+              size="small"
+              rounded
+              v-tooltip.bottom="'Edit File Details'"
+            />
             <Button
               id="info-btn"
               icon="pi pi-search"
