@@ -33,8 +33,8 @@ const newCollection = ref<CreateCollectionPayload>({
   collection_description: '',
   storage_type: '',
   bucket_name: '',
-  public: false,
-  secret: false,
+  public: undefined,
+  secret: undefined,
   labels: [] as Label[]
 })
 
@@ -65,8 +65,8 @@ onMounted(() => {
     collection_description: '',
     storage_type: '',
     bucket_name: '',
-    public: false,
-    secret: false,
+    public: undefined,
+    secret: undefined,
     labels: [] as Label[]
   }
 })
@@ -107,50 +107,65 @@ const mapBucketList = (storageType: string | undefined): string[] => {
   )
 }
 
+const isValidBucket = (storageType: string | undefined, bucketName: string | undefined): boolean =>
+  Boolean(
+    storageType &&
+      bucketName &&
+      bucketList.value?.bucket_list.some(
+        (item) => item.storage_type === storageType && item.bucket_name === bucketName,
+      ),
+  )
+
 const saveCollection = async () => {
-  createCollectionLoadingBtn.value = !createCollectionLoadingBtn.value
+  submitted.value = true
+  const collectionName = newCollection.value.collection_name?.trim()
+  const validStorageType = storageTypes.value.includes(newCollection.value.storage_type ?? '')
+
+  if (
+    !collectionName ||
+    !validStorageType ||
+    !isValidBucket(newCollection.value.storage_type, newCollection.value.bucket_name) ||
+    typeof newCollection.value.public !== 'boolean' ||
+    typeof newCollection.value.secret !== 'boolean'
+  ) {
+    return
+  }
+
+  newCollection.value.collection_name = collectionName
+  createCollectionLoadingBtn.value = true
 
   const payload: CreateCollectionPayload = {
     ...newCollection.value,
   }
 
-  await createNewCollection(payload)
-    .then()
-    .catch((err) => {
-      let message = ''
-      if (err instanceof Error) {
-        message = err.message
-      } else {
-        message = 'Failed attempt to create collection'
-      }
-
-      toast.add({
-        severity: 'danger',
-        summary: 'Failed',
-        detail: message,
-        life: 4000,
-      })
+  try {
+    await createNewCollection(payload)
+    toast.add({
+      severity: 'success',
+      summary: 'Successful',
+      detail: 'Collection Created Successfully!',
+      life: 4000,
     })
 
-  toast.add({
-    severity: 'success',
-    summary: 'Successful',
-    detail: 'Collection Created Successfully!',
-    life: 4000,
-  })
-
-  createCollectionLoadingBtn.value = !createCollectionLoadingBtn.value
-
-  closeDialog()
-
-  newCollection.value = {
-    collection_name: '',
-    collection_description: '',
-    storage_type: '',
-    bucket_name: '',
-    public: false,
-    secret: false,
-    labels: [] as Label[]
+    closeDialog()
+    newCollection.value = {
+      collection_name: '',
+      collection_description: '',
+      storage_type: '',
+      bucket_name: '',
+      public: undefined,
+      secret: undefined,
+      labels: [] as Label[],
+    }
+  } catch (err) {
+    toast.add({
+      severity: 'danger',
+      summary: 'Failed',
+      detail: err instanceof Error ? err.message : 'Failed attempt to create collection',
+      life: 4000,
+    })
+  } finally {
+    createCollectionLoadingBtn.value = false
   }
 }
 
@@ -191,10 +206,10 @@ const fetchStorageBucketList = async () => {
         v-model.trim="newCollection.collection_name"
         required
         autofocus
-        :invalid="submitted && !newCollection.collection_name"
+        :invalid="submitted && !newCollection.collection_name?.trim()"
         fluid
       />
-      <small v-if="submitted && !newCollection.collection_name" class="text-red-500"
+      <small v-if="submitted && !newCollection.collection_name?.trim()" class="text-red-500"
         >Name is required.</small
       >
     </div>
@@ -203,7 +218,6 @@ const fetchStorageBucketList = async () => {
       <Textarea
         id="description"
         v-model="newCollection.collection_description"
-        required
         rows="3"
         cols="20"
         fluid
@@ -217,11 +231,14 @@ const fetchStorageBucketList = async () => {
       <Select
         id="storage_type"
         v-model="newCollection.storage_type"
+        required
         :options="storageTypes"
         placeholder="Select a Storage Environment"
+        :invalid="submitted && !storageTypes.includes(newCollection.storage_type ?? '')"
+        @update:model-value="newCollection.bucket_name = ''"
         fluid
       ></Select>
-      <small v-if="submitted && !newCollection.storage_type" class="text-red-500"
+      <small v-if="submitted && !storageTypes.includes(newCollection.storage_type ?? '')" class="text-red-500"
         >Storage Env. is required.</small
       >
     </div>
@@ -233,13 +250,13 @@ const fetchStorageBucketList = async () => {
         v-model.trim="newCollection.bucket_name"
         required
         autofocus
-        :invalid="submitted && !newCollection.bucket_name"
+        :invalid="submitted && !isValidBucket(newCollection.storage_type, newCollection.bucket_name)"
         :options="mapBucketList(newCollection.storage_type)"
         placeholder="Select a Storage Bucket"
         fluid
       />
-      <small v-if="submitted && !newCollection.bucket_name" class="text-red-500"
-        >Storage Bucket is required.</small
+      <small v-if="submitted && !isValidBucket(newCollection.storage_type, newCollection.bucket_name)" class="text-red-500"
+        >Select a valid storage bucket.</small
       >
     </div>
 
@@ -330,25 +347,29 @@ const fetchStorageBucketList = async () => {
           <label for="public2">No</label>
         </div>
       </div>
+      <small v-if="(submitted && typeof newCollection.public !== 'boolean')" class="text-gray-500">Select Yes or No</small>
     </div>
 
     <div>
       <div class="flex items-baseline gap-2">
-        <span class="block font-bold mb-4">Publicly Visible</span>
+        <span class="block font-bold mb-4">Hidden from public catalog</span>
         <small class="text-gray-500"
-          >(yes to publicly list this collection in the catalog, otherwise it will be hidden)</small
+          >(choose Yes to hide this collection from the public catalog)</small
         >
       </div>
       <div class="grid grid-cols-12 gap-4">
         <div class="flex items-center gap-2 col-span-6">
           <RadioButton id="secret1" v-model="newCollection.secret" name="secret" :value="true" />
-          <label for="public1">Yes</label>
+          <label for="secret1">Yes</label>
         </div>
         <div class="flex items-center gap-2 col-span-6">
           <RadioButton id="secret2" v-model="newCollection.secret" name="secret" :value="false" />
-          <label for="public2">No</label>
+          <label for="secret2">No</label>
         </div>
       </div>
+      <small v-if="submitted && typeof newCollection.secret !== 'boolean'" class="text-red-500">
+        Select Yes or No.
+      </small>
     </div>
   </div>
   <div class="flex items-center justify-end mt-10 gap-2">

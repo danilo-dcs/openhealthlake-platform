@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import DynamicDialog from 'primevue/dynamicdialog'
 import Chip from 'primevue/chip'
+import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 
 import { useToast } from 'primevue/usetoast'

@@ -88,7 +88,7 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
       <div class="col-12 sm:col-6 md:col-3">
         <strong>Storage:</strong> {{ collection?.storage_type.toUpperCase() }}
       </div>
-      <div class="col-12 md:col-6"><strong>Bucket Name:</strong> {{ collection?.location }}</div>
+      <div class="col-12 md:col-6"><strong>Bucket Name:</strong> {{ collection?.bucket }}</div>
 
       <div class="col-12">
         <p v-if="collection?.collection_description">
@@ -146,7 +146,7 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
           <span class="hidden sm:inline">Upload File</span>
         </Button>
       </div> -->
-      <FilesTable :collectionId="collection?.id" viewmode="collectionInfo" />
+      <FilesTable :collectionId="collection?.id" />
     </div>
   </Panel>
 </template>
