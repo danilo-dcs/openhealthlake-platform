@@ -162,7 +162,7 @@ class MinioClient:
         from datetime import timedelta
         return self.client.presigned_put_object(self.bucket, object_name, expires=timedelta(seconds=expires))
 
-    def generate_download_url(self, object_name: str, expires: int) -> str:
+    def generate_download_url(self, object_name: str, expires: int = 3600) -> str:
         from datetime import timedelta
         return self.client.presigned_get_object(self.bucket, object_name, expires=timedelta(seconds=expires))
 
