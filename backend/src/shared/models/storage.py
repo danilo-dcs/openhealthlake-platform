@@ -28,6 +28,11 @@ class UploadFileRequestPayload(BaseModel):
 class DownloadFileRequestPayload(BaseModel):
     catalog_file_id: str
 
+class UpdateFilePayload(BaseModel):
+    file_category: Optional[FileCategory] = None
+    file_description: Optional[str] = None
+    labels: Optional[List[Label]] = None
+
 class CreateCollectionPayload(BaseModel):
     storage_type: Storage
     collection_name: str

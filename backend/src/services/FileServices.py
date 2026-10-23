@@ -6,7 +6,7 @@ from services.CredentialServices import CredentialServices
 from shared.models.catalog import CatalogFileBaseModel, CatalogFilter, CouchbaseCatalogFileModel
 from shared.factories.StorageClientFactory import StorageClientFactory
 from shared.models.credentials import CouchbaseCredentialModel
-from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UploadFileRequestPayload, UploadFileRequestResponse
+from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UpdateFilePayload, UploadFileRequestPayload, UploadFileRequestResponse
 from shared.handlers.TimeHandler import TimeHandler
 
 MultiPartParser.max_file_size = 20 * 1024 * 1024  # setting th emax file size to 20 MB
@@ -238,6 +238,47 @@ class FileServices:
         )
 
         return record_status
+
+    async def update_file_record(
+        self,
+        catalog_record_id: str,
+        payload: UpdateFilePayload,
+        user_id: str,
+    ) -> CouchbaseCatalogFileModel:
+        """Update editable metadata on a file catalog record."""
+        changes = payload.model_dump(exclude_unset=True)
+        if not changes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Provide at least one file field to update.",
+            )
+
+        catalog_services = CatalogServices()
+        file_record = await catalog_services.get_by_id_api(
+            document_id=catalog_record_id,
+            collection_name="files",
+        )
+
+        if not file_record or not file_record.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File catalog record was not found.",
+            )
+
+        if not file_record.inserted_by or file_record.inserted_by.split(":", 1)[0] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the file's collection owner can update this file record.",
+            )
+
+        updated_record = file_record.model_copy(update=changes)
+        await catalog_services.couchbaseRepo.upsert_document(
+            collection_name="files",
+            key=catalog_record_id,
+            value=updated_record.model_dump(exclude_none=True, exclude_unset=True),
+        )
+
+        return updated_record
 
    
     async def create_download_request_directly(

@@ -11,7 +11,7 @@ from services.CollectionServices import CollectionServices
 from services.CredentialServices import CredentialServices
 from services.FileServices import FileServices
 from shared.models.catalog import CouchbaseCatalogCollectionModel, CouchbaseCatalogFileModel
-from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, DownloadFileRequestPayload, DownloadFileRequestResponse, GetStorageBucketListResponse, UpdateCollectionPayload, UploadFileRequestPayload, UploadFileRequestResponse
+from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, DownloadFileRequestPayload, DownloadFileRequestResponse, GetStorageBucketListResponse, UpdateCollectionPayload, UpdateFilePayload, UploadFileRequestPayload, UploadFileRequestResponse
 from routes.auth_routes import auth_oauth2_scheme
 
 
@@ -114,6 +114,27 @@ async def upload_file_request_direct(
     result = await files_services.create_upload_file_request_directly(payload=payload, user_id=user_id)
 
     return result
+
+
+@router.patch(
+    "/files/{catalog_record_id}",
+    summary="Update file catalog metadata",
+    response_model=CouchbaseCatalogFileModel,
+    response_model_exclude_none=True,
+    response_model_exclude_unset=True,
+)
+async def update_file_record(
+    catalog_record_id: str,
+    request: Request,
+    payload: UpdateFilePayload,
+    _: str = Depends(auth_oauth2_scheme),
+) -> CouchbaseCatalogFileModel:
+    file_services = FileServices()
+    return await file_services.update_file_record(
+        catalog_record_id=catalog_record_id,
+        payload=payload,
+        user_id=request.state.user,
+    )
 
 
 @router.get(
