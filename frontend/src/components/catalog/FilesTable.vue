@@ -194,9 +194,9 @@ const displayItemInfo = (data: CatalogFileRecord) => {
 }
 
 const donwloadItemFile = async (data: CatalogFileRecord) => {
-  const uploadFileResponse = (await downloadFileFileRequest(data.id)) as DownloadFileRequesResponse
+  const downloadFileResponse = (await downloadFileFileRequest(data.id)) as DownloadFileRequesResponse
 
-  if (!uploadFileResponse) {
+  if (!downloadFileResponse) {
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -212,7 +212,8 @@ const donwloadItemFile = async (data: CatalogFileRecord) => {
     life: 4000,
   })
 
-  streamDownloadToFile(uploadFileResponse.download_url, data.file_name)
+  // streamDownloadToFile(downloadFileResponse.download_url, data.file_name)
+  downloadFile2(downloadFileResponse.download_url, data.file_name)
 }
 
 // API REQUESTS
@@ -350,6 +351,45 @@ const downloadFileFileRequest = async (
     toast.add({
       severity: 'error',
       summary: 'Unable to fetch download request',
+      detail: String(error),
+      life: 4000,
+    })
+  }
+}
+
+const downloadFile2 = async (
+  url: string,
+  suggestedFileName: string,
+): Promise<void> => {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Download failed (${response.status})`)
+    }
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = objectUrl
+    link.download = suggestedFileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    // Keep the Blob URL alive briefly while the browser starts the download.
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+
+    toast.add({
+      severity: 'success',
+      summary: 'File Download',
+      detail: 'The download has started.',
+      life: 4000,
+    })
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
       detail: String(error),
       life: 4000,
     })
