@@ -72,7 +72,7 @@ onMounted(async () => {
     <div class="mx-auto max-w-7xl">
       <header class="mb-8">
         <p class="text-sm font-semibold uppercase tracking-wider text-primary-600">
-          OpenHealthLake
+          Open Health Lake
         </p>
         <h1 class="mt-1 text-3xl font-bold text-gray-900">Dashboard</h1>
         <p class="mt-2 text-gray-600">An overview of the data stored in the OpenHealthLake platform.</p>
