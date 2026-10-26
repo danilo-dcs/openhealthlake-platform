@@ -10,9 +10,13 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/DashboardView.vue'),
+    },
+    {
       path: '/',
-      name: 'home',
-      component: () => import('../views/HomeView.vue'),
+      redirect: { name: 'dashboard' },
     },
     {
       path: '/login',
@@ -52,8 +56,8 @@ router.beforeEach(async (to) => {
 
   const isAuthenticated = !!userStore.accessToken
 
-  if (to.path === '/login' && isAuthenticated) return '/'
-  if (to.path !== '/login' && !isAuthenticated) return '/login'
+  if (to.name === 'login' && isAuthenticated) return { name: 'dashboard', replace: true }
+  if (to.name !== 'login' && !isAuthenticated) return { name: 'login', replace: true }
 })
 
 export default router

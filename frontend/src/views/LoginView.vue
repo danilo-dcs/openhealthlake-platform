@@ -132,8 +132,7 @@ const loginOnSubmit = async (): Promise<void> => {
       tokenType: responseData.token_type,
     })
 
-    // Redirect to home page
-    router.push('/')
+    await router.replace({ name: 'dashboard' })
   } catch (err: unknown) {
     let error = ''
     if (err instanceof Error) {

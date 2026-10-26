@@ -18,6 +18,12 @@ const lakehouseApiUrl = import.meta.env.DEV
 
   const userStore = useUserStore()
 
+  const redirectToLogin = async () => {
+    if (router.currentRoute.value.name !== 'login') {
+      await router.replace({ name: 'login' })
+    }
+  }
+
   const finalHeaders: Record<string, string> = {
     ...(headers || {}),
     ...(userStore.accessToken ? { Authorization: `Bearer ${userStore.accessToken}` } : {}),
@@ -53,11 +59,12 @@ const lakehouseApiUrl = import.meta.env.DEV
         })
 
         if (response.status === 401) {
-          await router.push('/login')
+          userStore.clearUser()
+          await redirectToLogin()
         }
 
       } else {
-        await router.push('/login')
+        await redirectToLogin()
       }
     }
 
