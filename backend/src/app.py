@@ -15,6 +15,7 @@ from routes.storage_routes import router as storage_router
 from routes.user_routes import router as users_router
 # from routes.visa_routes import router as visas_router
 from routes.access_request_routes import router as access_request_routes
+from routes.stats_routes import router as stats_router
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -63,4 +64,5 @@ app.include_router(access_request_routes)
 app.include_router(credentials_router)
 app.include_router(storage_router)
 app.include_router(users_router)
+app.include_router(stats_router)
 # app.include_router(visas_router)
