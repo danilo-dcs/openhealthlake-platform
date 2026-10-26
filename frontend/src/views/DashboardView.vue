@@ -93,7 +93,7 @@ onMounted(async () => {
               <p class="mt-1 text-sm text-gray-500">Connected storage buckets</p>
             </div>
             <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-primary-600">
-              <i class="pi pi-database text-xl" aria-hidden="true"></i>
+              <i class="pi pi-server text-xl" aria-hidden="true"></i>
             </span>
           </div>
         </article>
