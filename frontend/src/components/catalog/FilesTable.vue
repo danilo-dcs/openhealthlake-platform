@@ -500,7 +500,7 @@ const streamDownloadToFile = async (url: string, suggestedFileName: string): Pro
                 v-for="label in data.labels"
                 :key="label.value"
                 :value="label.value"
-                :style="{ backgroundColor: defaultColors[label.color] ?? label.color }"
+                :style="{ backgroundColor: label.color }"
                 class="text-white"
               />
             </template>
