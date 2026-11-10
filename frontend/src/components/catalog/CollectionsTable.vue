@@ -234,7 +234,7 @@ const openItemInfoDialog = (data: CatalogCollectionRecord) => {
   const dialogSpecs = {
     props: {
       ...dialogDefaultProps,
-      header: 'Collection Data',
+      header: 'Collection Details',
       style: {
         width: '80vw',
       },

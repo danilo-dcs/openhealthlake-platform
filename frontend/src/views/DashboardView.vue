@@ -130,11 +130,11 @@ onMounted(async () => {
         </article>
 
         <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:col-span-2 xl:col-span-3">
-          <div class="h-full">
+          <div class="grid h-full grid-cols-1 gap-6 lg:grid-cols-2 lg:items-center">
             <div>
               <h2 class="text-lg font-semibold text-gray-900">Collection visibility</h2>
               <p class="mt-1 text-sm text-gray-500">Public and private collections</p>
-              <div class="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
+              <div class="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center lg:justify-start">
                 <div
                   class="flex h-36 w-36 shrink-0 items-center justify-center rounded-full"
                   :style="{
@@ -147,7 +147,7 @@ onMounted(async () => {
                     {{ loading ? '…' : `${publicPercentage}%` }} public
                   </div>
                 </div>
-                <dl class="grid w-full min-w-0 grid-cols-1 gap-4 sm:flex-1 sm:grid-cols-1">
+                <dl class="grid w-full grid-cols-2 gap-4 sm:max-w-xs sm:grid-cols-1">
                   <div class="rounded-lg bg-gray-50 px-4 py-3">
                     <dt class="flex items-center gap-2 text-sm text-gray-600">
                       <span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span>Public
