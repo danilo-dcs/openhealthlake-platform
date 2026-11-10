@@ -7,14 +7,13 @@ import { useToast } from 'primevue'
 
 import type { CatalogCollectionRecord } from '@/shared/interfaces/http/CatalogCollectionResponse'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
-import { onMounted, ref, inject, type Ref, computed } from 'vue'
+import { onMounted, onBeforeUnmount, ref, inject, type Ref, computed } from 'vue'
 import type {
   AccessRequestModel,
   AccessRequestSearchResponse,
 } from '@/shared/interfaces/http/AccessRequestSearchResponse'
 import type { AccessRequestSearchPayload } from '@/shared/interfaces/http/AccessRequestSearchPayload'
 import type { AccessRequestCreateResponse } from '@/shared/interfaces/http/AccessRequestCreateResponse'
-import { useRouter } from 'vue-router'
 
 import { useUserStore } from '@/stores/userStore'
 import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
@@ -22,7 +21,6 @@ import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
 const userStore = useUserStore()
 
 const toast = useToast()
-const router = useRouter()
 
 const dialogRef = inject('dialogRef') as Ref<DynamicDialogInstance>
 
@@ -33,13 +31,25 @@ const user_id = computed(() => userStore.userId)
 const userAccessRequests = ref<AccessRequestSearchResponse>()
 
 const sendButtonLoading = ref<boolean>(false)
+const duaExpanded = ref(false)
+const duaAcknowledged = ref(false)
+const duaPdfUrl = ref('')
+const duaPdfLoading = ref(false)
+const duaPdfError = ref('')
+const hasDua = computed(() => Boolean(collection.value?.dua))
 
 // LIFECYCLE
 onMounted(() => {
   const param = dialogRef.value.data
   collection.value = param as CatalogCollectionRecord
+  duaExpanded.value = hasDua.value
 
   fetchAccessRequestData()
+  if (hasDua.value) fetchCollectionDua()
+})
+
+onBeforeUnmount(() => {
+  if (duaPdfUrl.value) URL.revokeObjectURL(duaPdfUrl.value)
 })
 
 // ACTIONS
@@ -71,17 +81,53 @@ const hasDeclinedRequests = (): boolean => {
 }
 
 const sendReequest = async () => {
+  if (hasDua.value && !duaAcknowledged.value) return
+
   sendButtonLoading.value = true
+  try {
+    await createAccessRequest()
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Access request successfully sent',
+      life: 4000,
+    })
+    await fetchAccessRequestData()
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Unable to send access request',
+      detail: error instanceof Error ? error.message : String(error),
+      life: 5000,
+    })
+  } finally {
+    sendButtonLoading.value = false
+  }
+}
 
-  const newRequest = await createAccessRequest()
+const fetchCollectionDua = async () => {
+  if (!collection.value?.id || !collection.value.dua) return
+  duaPdfLoading.value = true
+  duaPdfError.value = ''
+  try {
+    const pdf = await apiRequestHandler<Blob>(
+      `/storage/collections/${encodeURIComponent(collection.value.id)}/dua`,
+      'GET',
+      undefined,
+      undefined,
+      'blob',
+    )
+    if (duaPdfUrl.value) URL.revokeObjectURL(duaPdfUrl.value)
+    duaPdfUrl.value = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }))
+  } catch (error) {
+    duaPdfError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    duaPdfLoading.value = false
+  }
+}
 
-  toast.add({
-    severity: 'success',
-    summary: 'Success',
-    detail: 'Access requeset successfully sent',
-    life: 4000,
-  })
-  sendButtonLoading.value = false
+const toggleDuaViewer = () => {
+  duaExpanded.value = !duaExpanded.value
 }
 
 // API REQUESTS
@@ -115,9 +161,6 @@ const fetchAccessRequestData = async () => {
   userAccessRequests.value = responseData
 }
 
-const closeDialog = () => {
-  dialogRef.value.close()
-}
 </script>
 
 <template>
@@ -131,6 +174,42 @@ const closeDialog = () => {
   <div class="flex flex-column justify-center mt-5" v-else>
     <div class="flex flex-col items-center">
       <p class="mb-4 text-center">Request access by sending an email to the collection's owner</p>
+      <section v-if="hasDua" class="w-full rounded-lg border border-surface-300 p-4">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between text-left font-semibold"
+          :aria-expanded="duaExpanded"
+          @click="toggleDuaViewer"
+        >
+          <span>Data Usage Agreement</span>
+          <i :class="duaExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" aria-hidden="true" />
+        </button>
+        <div v-if="duaExpanded" class="mt-4">
+          <div v-if="duaPdfLoading" class="py-8 text-center" role="status">Loading agreement…</div>
+          <div v-else-if="duaPdfError" class="flex flex-col items-center gap-3 py-4 text-center">
+            <p class="text-red-500">Unable to load the Data Usage Agreement.</p>
+            <Button label="Try again" icon="pi pi-refresh" text @click="fetchCollectionDua" />
+          </div>
+          <iframe
+            v-else-if="duaPdfUrl"
+            :src="duaPdfUrl"
+            title="Data Usage Agreement PDF"
+            class="h-[55vh] min-h-80 w-full rounded border"
+          />
+        </div>
+      </section>
+      <div v-if="hasDua" class="mt-4 flex w-full items-start gap-3">
+        <input
+          id="dua-acknowledgment"
+          v-model="duaAcknowledged"
+          type="checkbox"
+          class="mt-1 h-4 w-4"
+          :disabled="!duaPdfUrl"
+        />
+        <label for="dua-acknowledgment" class="text-sm">
+          I acknowledge the usage terms and take legal responsibility for any misconduct.
+        </label>
+      </div>
       <Button
         class="mt-5"
         icon="pi pi-envelope"
@@ -138,6 +217,7 @@ const closeDialog = () => {
         label="Send"
         @click="sendReequest()"
         :loading="sendButtonLoading"
+        :disabled="sendButtonLoading || (hasDua && !duaAcknowledged)"
       />
     </div>
   </div>

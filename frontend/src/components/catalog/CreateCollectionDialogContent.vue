@@ -2,6 +2,7 @@
 
 <script setup lang="ts">
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import Divider from 'primevue/divider'
 import InputText from 'primevue/inputtext'
 import RadioButton from 'primevue/radiobutton'
@@ -41,6 +42,14 @@ const newCollection = ref<CreateCollectionPayload>({
 const createCollectionLoadingBtn = ref<boolean>(false)
 
 const submitted = ref<boolean>(false)
+const attachDua = ref(false)
+const duaFile = ref<File | null>(null)
+const duaFileError = ref('')
+const maxDuaSizeBytes = 20 * 1024 * 1024
+
+interface StageCollectionDUAResponse {
+  dua_id: string
+}
 
 const storageTypes = ref<string[]>(StorageOptions)
 
@@ -97,6 +106,28 @@ const hideCollectionDialog = () => {
     refresh: false,
   })
   submitted.value = false
+  attachDua.value = false
+  duaFile.value = null
+  duaFileError.value = ''
+}
+
+const onDuaFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  duaFile.value = file
+  duaFileError.value = ''
+
+  if (!file) return
+
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    duaFileError.value = 'Choose a PDF file.'
+    duaFile.value = null
+    input.value = ''
+  } else if (file.size > maxDuaSizeBytes) {
+    duaFileError.value = 'The PDF must be 20 MB or smaller.'
+    duaFile.value = null
+    input.value = ''
+  }
 }
 
 const mapBucketList = (storageType: string | undefined): string[] => {
@@ -131,14 +162,35 @@ const saveCollection = async () => {
     return
   }
 
+  if (attachDua.value && (!duaFile.value || duaFileError.value)) {
+    duaFileError.value ||= 'Select a PDF to attach as the Data Usage Agreement.'
+    return
+  }
+
   newCollection.value.collection_name = collectionName
   createCollectionLoadingBtn.value = true
 
-  const payload: CreateCollectionPayload = {
-    ...newCollection.value,
-  }
+  let stagedDuaId: string | undefined
 
   try {
+    if (attachDua.value && duaFile.value) {
+      const formData = new FormData()
+      formData.append('storage_type', newCollection.value.storage_type ?? '')
+      formData.append('bucket_name', newCollection.value.bucket_name ?? '')
+      formData.append('file', duaFile.value)
+
+      const stagedDua = await apiRequestHandler<StageCollectionDUAResponse>(
+        '/storage/collections/dua/stage',
+        'POST',
+        formData,
+      )
+      stagedDuaId = stagedDua.dua_id
+    }
+
+    const payload: CreateCollectionPayload = {
+      ...newCollection.value,
+      ...(stagedDuaId ? { dua: stagedDuaId } : {}),
+    }
     await createNewCollection(payload)
     toast.add({
       severity: 'success',
@@ -157,7 +209,24 @@ const saveCollection = async () => {
       secret: undefined,
       labels: [] as Label[],
     }
+    attachDua.value = false
+    duaFile.value = null
+    duaFileError.value = ''
   } catch (err) {
+    if (stagedDuaId) {
+      const cleanupParams = new URLSearchParams({
+        storage_type: newCollection.value.storage_type,
+        bucket_name: newCollection.value.bucket_name,
+      })
+      try {
+        await apiRequestHandler(
+          `/storage/collections/dua/stage/${encodeURIComponent(stagedDuaId)}?${cleanupParams}`,
+          'DELETE',
+        )
+      } catch (cleanupError) {
+        console.warn('Unable to remove staged DUA after collection creation failed:', cleanupError)
+      }
+    }
     toast.add({
       severity: 'danger',
       summary: 'Failed',
@@ -258,6 +327,31 @@ const fetchStorageBucketList = async () => {
       <small v-if="submitted && !isValidBucket(newCollection.storage_type, newCollection.bucket_name)" class="text-red-500"
         >Select a valid storage bucket.</small
       >
+    </div>
+
+    <Divider />
+
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center gap-2">
+        <Checkbox v-model="attachDua" input-id="attach-dua" binary />
+        <label for="attach-dua" class="font-bold">Attach a Data Usage Agreement (PDF)</label>
+      </div>
+      <div v-if="attachDua" class="pl-7">
+        <label for="dua-file" class="mb-2 block">Agreement document</label>
+        <input
+          id="dua-file"
+          type="file"
+          accept="application/pdf,.pdf"
+          class="block w-full rounded border p-2"
+          :aria-invalid="submitted && (!duaFile || Boolean(duaFileError))"
+          @change="onDuaFileChange"
+        />
+        <small v-if="duaFileError" class="text-red-500">{{ duaFileError }}</small>
+        <small v-else class="text-gray-500">PDF only, up to 20 MB.</small>
+        <small v-if="submitted && !duaFile && !duaFileError" class="block text-red-500">
+          Select a PDF to attach as the Data Usage Agreement.
+        </small>
+      </div>
     </div>
 
     <Divider />

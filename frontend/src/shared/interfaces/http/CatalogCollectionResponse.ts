@@ -6,6 +6,7 @@ export interface CatalogCollectionRecord {
   status: string
   location: string
   collection_description: string
+  dua?: string
   public: false
   secret: false
   labels: string[]

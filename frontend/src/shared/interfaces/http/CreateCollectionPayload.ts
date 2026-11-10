@@ -13,4 +13,5 @@ export interface CreateCollectionPayload {
   public?: boolean
   secret?: boolean
   labels?: Label[]
+  dua?: string
 }

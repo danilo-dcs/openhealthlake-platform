@@ -8,6 +8,7 @@ export async function apiRequestHandler<T>(
   method: HttpMethod = 'GET',
   body?: any,
   headers?: any,
+  responseType: 'json' | 'blob' = 'json',
 ): Promise<T> {
 
 const lakehouseApiUrl = import.meta.env.DEV
@@ -29,15 +30,20 @@ const lakehouseApiUrl = import.meta.env.DEV
     ...(userStore.accessToken ? { Authorization: `Bearer ${userStore.accessToken}` } : {}),
   }
 
-  if (['POST', 'PUT', 'PATCH'].includes(method)) {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+
+  if (['POST', 'PUT', 'PATCH'].includes(method) && !isFormData) {
     finalHeaders['Content-Type'] = 'application/json'
   }
+
+  // The browser must set the multipart boundary for FormData requests.
+  const requestBody = body == null ? undefined : isFormData ? body : JSON.stringify(body)
 
   try {
     let response = await fetch(finalUrl, {
       method,
       headers: finalHeaders,
-      body: body ? JSON.stringify(body) : undefined,
+      body: requestBody,
       credentials: 'include',
     })
 
@@ -54,7 +60,7 @@ const lakehouseApiUrl = import.meta.env.DEV
         response = await fetch(finalUrl, {
           method,
           headers: retryHeaders,
-          body: body ? JSON.stringify(body) : undefined,
+          body: requestBody,
           credentials: 'include',
         })
 
@@ -79,7 +85,7 @@ const lakehouseApiUrl = import.meta.env.DEV
       return {} as T
     }
 
-    const data: T = await response.json()
+    const data: T = responseType === 'blob' ? ((await response.blob()) as T) : await response.json()
     return data
   } catch (error) {
     console.error('Fetch error:', error)
