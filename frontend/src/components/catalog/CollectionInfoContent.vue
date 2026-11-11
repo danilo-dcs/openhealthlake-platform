@@ -96,9 +96,9 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
           </div>
           <span
             class="inline-flex shrink-0 items-center rounded-full px-3 py-1 text-sm font-medium"
-            :class="collection.public ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'"
+            :class="collection.public ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
           >
-            <span class="mr-2 h-2 w-2 rounded-full" :class="collection.public ? 'bg-emerald-500' : 'bg-gray-400'"></span>
+            <span class="mr-2 h-2 w-2 rounded-full" :class="collection.public ? 'bg-emerald-500' : 'bg-red-400'"></span>
             {{ collection.public ? 'Public' : 'Private' }}
           </span>
         </article>

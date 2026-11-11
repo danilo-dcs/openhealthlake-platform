@@ -595,6 +595,16 @@ const fetchUserCollectionCatalog = async () => {
             />
             <Button
               v-if="user_id && data.inserted_by.includes(user_id)"
+              id="invite-collaborator-btn"
+              icon="pi pi-user-plus"
+              @click="openRequestAccessDialog(data)"
+              severity="secondary"
+              size="small"
+              rounded
+              v-tooltip.bottom="'Access Control'"
+            />
+            <!-- <Button
+              v-if="user_id && data.inserted_by.includes(user_id)"
               id="grant-access-btn"
               icon="pi pi-users"
               @click="openAccessControlDialog(data)"
@@ -602,7 +612,7 @@ const fetchUserCollectionCatalog = async () => {
               size="small"
               rounded
               v-tooltip.bottom="'Access Control'"
-            />
+            /> -->
             <Button
               v-if="user_id && data.inserted_by.includes(user_id)"
               id="delete-collection-btn"
