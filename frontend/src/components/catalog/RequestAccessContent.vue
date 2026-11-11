@@ -211,7 +211,7 @@ const fetchAccessRequestData = async () => {
   <Toast />
   <div v-if="isCollectionOwner" class="flex flex-col gap-5">
     <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 class="text-lg font-semibold text-gray-900">Invite a collaborator</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Add a collaborator</h2>
       <p class="mt-1 text-sm text-gray-500">Add an existing OpenHealthLake user to this collection.</p>
       <form class="mt-4 flex flex-col gap-3 sm:flex-row" @submit.prevent="inviteCollaborator">
         <input
@@ -225,7 +225,7 @@ const fetchAccessRequestData = async () => {
         />
         <Button
           type="submit"
-          label="Add user"
+          label="Add"
           icon="pi pi-user-plus"
           :loading="inviteButtonLoading"
           :disabled="inviteButtonLoading || !inviteEmail.trim()"
