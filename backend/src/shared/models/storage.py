@@ -41,6 +41,7 @@ class CreateCollectionPayload(BaseModel):
     public: Optional[bool] = False
     secret: Optional[bool] = False
     labels: Optional[List[Label]] = []
+    dua: Optional[str] = None
 
 class UpdateCollectionPayload(BaseModel):
     collection_name: Optional[str] = None
@@ -60,6 +61,13 @@ class UploadFileRequestResponse(BaseModel):
 
 class DownloadFileRequestResponse(BaseModel):
     download_url: str
+
+class UploadCollectionDUAResponse(BaseModel):
+    collection_id: str
+    dua_id: str
+
+class StageCollectionDUAResponse(BaseModel):
+    dua_id: str
 
 class StorageBucketItem(BaseModel):
     storage_type: Storage

@@ -1,9 +1,15 @@
+import logging
+
 from shared.models.catalog import CatalogCollectionBaseModel, CatalogFilter, CouchbaseCatalogCollectionModel
 from shared.models.storage import CreateCollectionPayload, CreateCollectionResponse, UpdateCollectionPayload
 from shared.models.visas import AssertedVisaModel, CreateVisaPayload
 from fastapi import HTTPException, status
+from uuid import UUID
+from shared.factories.StorageClientFactory import StorageClientFactory
 
 class CollectionServices:
+    logger = logging.getLogger(__name__)
+
     async def update_collection(
         self,
         collection_id: str,
@@ -88,6 +94,7 @@ class CollectionServices:
         from services.UserServices import UserServices
 
         from shared.handlers.TimeHandler import TimeHandler
+        from shared.handlers.EncryptionHandler import EncryptionHandler
 
         credentialServices = CredentialServices()
         catalogServices = CatalogServices()
@@ -140,6 +147,37 @@ class CollectionServices:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"The Collection {payload.collection_name} already exists in the storage type {payload.storage_type}. Please provide an unique collection name or any other additional storage type"
             )
+
+        if payload.dua:
+            try:
+                dua_id = str(UUID(payload.dua))
+            except (ValueError, TypeError, AttributeError) as error:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid DUA document id.",
+                ) from error
+
+            dua_credential = target_credential[0]
+            decoded_credential = EncryptionHandler().decrypt_credentials(dua_credential.credential)
+            storage_client = StorageClientFactory.create_client(
+                storage_type=payload.storage_type,
+                bucket=payload.bucket_name,
+                credentials=decoded_credential,
+                minio_endpoint_use="internal",
+            )
+            staged_object_name = (
+                f"{payload.bucket_name}/documents/pending/{user_id}/{dua_id}.pdf"
+            )
+            try:
+                if storage_client.get_object_size(staged_object_name) is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="The uploaded DUA was not found or has expired. Upload it again.",
+                    )
+            finally:
+                storage_client.close()
+        else:
+            dua_id = None
         
         inserted_by = f"{user_id}:{user.email}"
 
@@ -153,12 +191,65 @@ class CollectionServices:
             inserted_by=inserted_by,
             inserted_at=inserted_at,
             collection_description=payload.collection_description,
+            dua=dua_id,
             public=payload.public if payload.public else False,
             secret=payload.secret if payload.secret else False,
             labels=payload.labels
         )
 
         catalog_item = await catalogServices.create_catalog_record(payload=catalog_record_payload, collection_name="collections")
+
+        if dua_id:
+            decoded_credential = EncryptionHandler().decrypt_credentials(target_credential[0].credential)
+            storage_client = StorageClientFactory.create_client(
+                storage_type=payload.storage_type,
+                bucket=payload.bucket_name,
+                credentials=decoded_credential,
+                minio_endpoint_use="internal",
+            )
+            staged_object_name = (
+                f"{payload.bucket_name}/documents/pending/{user_id}/{dua_id}.pdf"
+            )
+            final_object_name = (
+                f"{payload.bucket_name}/documents/{catalog_item.id}/{dua_id}.pdf"
+            )
+            try:
+                storage_client.move_object(staged_object_name, final_object_name)
+            except Exception as error:
+                # Keep the provider error in server logs; the public response stays
+                # generic because SDK exceptions can contain credential details.
+                self.logger.exception(
+                    "Could not move staged DUA %s to collection %s (%s/%s)",
+                    dua_id,
+                    catalog_item.id,
+                    payload.storage_type,
+                    payload.bucket_name,
+                )
+                try:
+                    if storage_client.get_object_size(final_object_name) is not None:
+                        storage_client.delete_object(final_object_name)
+                except Exception:
+                    self.logger.exception(
+                        "Could not remove partially moved DUA %s for collection %s",
+                        dua_id,
+                        catalog_item.id,
+                    )
+                try:
+                    await catalogServices.delete_catalog_record(
+                        document_id=catalog_item.id,
+                        collection_name="collections",
+                    )
+                except Exception:
+                    self.logger.exception(
+                        "Could not remove collection record %s after DUA move failed",
+                        catalog_item.id,
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="The DUA could not be attached to the new collection.",
+                ) from error
+            finally:
+                storage_client.close()
 
         visa_payload = CreateVisaPayload(
             visaIssuer=inserted_by,
@@ -170,6 +261,24 @@ class CollectionServices:
 
         if not visa_item:
             await catalogServices.delete_collection_record(document_id=catalog_item.id, user_id=user.id)
+            if dua_id:
+                cleanup_client = StorageClientFactory.create_client(
+                    storage_type=payload.storage_type,
+                    bucket=payload.bucket_name,
+                    credentials=EncryptionHandler().decrypt_credentials(target_credential[0].credential),
+                    minio_endpoint_use="internal",
+                )
+                try:
+                    final_object_name = (
+                        f"{payload.bucket_name}/documents/{catalog_item.id}/{dua_id}.pdf"
+                    )
+                    if cleanup_client.get_object_size(final_object_name) is not None:
+                        cleanup_client.delete_object(final_object_name)
+                except Exception:
+                    # The collection creation error is primary; storage cleanup is best-effort.
+                    pass
+                finally:
+                    cleanup_client.close()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
                 detail="Unable to create visa for new collection"

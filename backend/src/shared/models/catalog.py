@@ -42,6 +42,7 @@ class CatalogCollectionBaseModel(BaseModel):
     storage_type: Optional[str] = None
     bucket: Optional[str] = None
     collection_description: Optional[str] = None
+    dua: Optional[str] = None
     public: Optional[bool] = False
     secret: Optional[bool] = False
     labels: Optional[List[Label]] = []

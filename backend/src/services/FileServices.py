@@ -1,4 +1,9 @@
-from fastapi import HTTPException, status
+import logging
+import uuid6
+from uuid import UUID
+from collections.abc import Iterator
+
+from fastapi import HTTPException, UploadFile, status
 from starlette.formparsers import MultiPartParser
 
 from services.CatalogServices import CatalogServices
@@ -6,13 +11,57 @@ from services.CredentialServices import CredentialServices
 from shared.models.catalog import CatalogFileBaseModel, CatalogFilter, CouchbaseCatalogFileModel
 from shared.factories.StorageClientFactory import StorageClientFactory
 from shared.models.credentials import CouchbaseCredentialModel
-from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, UpdateFilePayload, UploadFileRequestPayload, UploadFileRequestResponse
+from shared.models.storage import DownloadFileRequestPayload, DownloadFileRequestResponse, StageCollectionDUAResponse, UpdateFilePayload, UploadCollectionDUAResponse, UploadFileRequestPayload, UploadFileRequestResponse
 from shared.handlers.TimeHandler import TimeHandler
 
 MultiPartParser.max_file_size = 20 * 1024 * 1024  # setting th emax file size to 20 MB
 
 
 class FileServices:
+    MAX_DUA_SIZE = 20 * 1024 * 1024
+
+    @classmethod
+    async def __read_valid_pdf(cls, uploaded_file: UploadFile) -> bytes:
+        filename = uploaded_file.filename or ""
+        if not filename.lower().endswith(".pdf"):
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Only PDF documents are accepted.",
+            )
+
+        document_data = await uploaded_file.read(cls.MAX_DUA_SIZE + 1)
+        if not document_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The PDF document is empty.",
+            )
+        if len(document_data) > cls.MAX_DUA_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="The PDF document exceeds the 20 MB upload limit.",
+            )
+        if b"%PDF-" not in document_data[:1024]:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="The uploaded file does not have a valid PDF signature.",
+            )
+        return document_data
+
+    @staticmethod
+    def __normalize_dua_id(dua_id: str) -> str:
+        try:
+            return str(UUID(dua_id))
+        except (ValueError, TypeError, AttributeError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid DUA document id.",
+            ) from error
+
+    @classmethod
+    def __staged_dua_object_name(cls, bucket_name: str, user_id: str, dua_id: str) -> str:
+        safe_dua_id = cls.__normalize_dua_id(dua_id)
+        return f"{bucket_name}/documents/pending/{user_id}/{safe_dua_id}.pdf"
+
 
     @staticmethod
     def __file_object_name(file_record: CatalogFileBaseModel) -> str:
@@ -165,6 +214,213 @@ class FileServices:
             method="POST" if collection_record.storage_type == 'hdfs' else "PUT",
             catalog_record_id=catalogRecord.id
         )
+
+    async def upload_collection_dua(
+        self,
+        collection_id: str,
+        uploaded_file: UploadFile,
+        user_id: str,
+    ) -> UploadCollectionDUAResponse:
+        """Store a PDF DUA and attach its ID to the owning collection record."""
+        from shared.handlers.EncryptionHandler import EncryptionHandler
+
+        document_data = await self.__read_valid_pdf(uploaded_file)
+
+        catalog_services = CatalogServices()
+        collection = await catalog_services.get_by_id_api(
+            document_id=collection_id,
+            collection_name="collections",
+        )
+        if not collection or not collection.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collection was not found.",
+            )
+        if not collection.inserted_by or collection.inserted_by.split(":", 1)[0] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the collection owner can attach its DUA.",
+            )
+        if collection.status == "deleted":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A DUA cannot be attached to a deleted collection.",
+            )
+        if collection.dua:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This collection already has a DUA attached.",
+            )
+        if not collection.bucket:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The collection does not have an associated storage bucket.",
+            )
+
+        credential = await self.__get_credential_by_storage_bucket(
+            storage_type=collection.storage_type,
+            bucket_name=collection.bucket,
+        )
+        decoded_credential = EncryptionHandler().decrypt_credentials(credential.credential)
+
+        dua_id = str(uuid6.uuid7())
+        object_name = f"{collection.bucket}/documents/{collection.id}/{dua_id}.pdf"
+        storage_client = StorageClientFactory.create_client(
+            storage_type=collection.storage_type,
+            bucket=collection.bucket,
+            credentials=decoded_credential,
+            minio_endpoint_use="internal",
+        )
+
+        try:
+            storage_client.upload_object(
+                object_name=object_name,
+                data=document_data,
+                content_type="application/pdf",
+            )
+            updated_collection = collection.model_copy(update={"dua": dua_id})
+            try:
+                await catalog_services.couchbaseRepo.upsert_document(
+                    collection_name="collections",
+                    key=collection.id,
+                    value=updated_collection.model_dump(exclude_none=True, exclude_unset=True),
+                )
+            except Exception:
+                try:
+                    storage_client.delete_object(object_name)
+                except Exception:
+                    logging.getLogger(__name__).exception(
+                        "Could not remove unlinked DUA object %s", object_name
+                    )
+                raise
+        finally:
+            storage_client.close()
+
+        return UploadCollectionDUAResponse(collection_id=collection.id, dua_id=dua_id)
+
+    async def stage_collection_dua(
+        self,
+        uploaded_file: UploadFile,
+        storage_type: str,
+        bucket_name: str,
+        user_id: str,
+    ) -> StageCollectionDUAResponse:
+        """Upload a DUA before collection creation under a user-scoped temporary key."""
+        from shared.handlers.EncryptionHandler import EncryptionHandler
+
+        document_data = await self.__read_valid_pdf(uploaded_file)
+        credential = await self.__get_credential_by_storage_bucket(
+            storage_type=storage_type,
+            bucket_name=bucket_name,
+        )
+        decoded_credential = EncryptionHandler().decrypt_credentials(credential.credential)
+
+        dua_id = str(uuid6.uuid7())
+        staged_object_name = self.__staged_dua_object_name(bucket_name, user_id, dua_id)
+        storage_client = StorageClientFactory.create_client(
+            storage_type=storage_type,
+            bucket=bucket_name,
+            credentials=decoded_credential,
+            minio_endpoint_use="internal",
+        )
+        try:
+            storage_client.upload_object(
+                object_name=staged_object_name,
+                data=document_data,
+                content_type="application/pdf",
+            )
+        finally:
+            storage_client.close()
+
+        return StageCollectionDUAResponse(dua_id=dua_id)
+
+    async def delete_staged_collection_dua(
+        self,
+        dua_id: str,
+        storage_type: str,
+        bucket_name: str,
+        user_id: str,
+    ) -> None:
+        """Remove an unlinked staged DUA after a collection create failure."""
+        from shared.handlers.EncryptionHandler import EncryptionHandler
+
+        credential = await self.__get_credential_by_storage_bucket(
+            storage_type=storage_type,
+            bucket_name=bucket_name,
+        )
+        decoded_credential = EncryptionHandler().decrypt_credentials(credential.credential)
+        staged_object_name = self.__staged_dua_object_name(bucket_name, user_id, dua_id)
+        storage_client = StorageClientFactory.create_client(
+            storage_type=storage_type,
+            bucket=bucket_name,
+            credentials=decoded_credential,
+            minio_endpoint_use="internal",
+        )
+        try:
+            if storage_client.get_object_size(staged_object_name) is not None:
+                storage_client.delete_object(staged_object_name)
+        finally:
+            storage_client.close()
+
+    async def open_collection_dua_stream(
+        self,
+        collection_id: str,
+    ) -> tuple[Iterator[bytes], str]:
+        """Open the attached DUA for an authenticated API response."""
+        from shared.handlers.EncryptionHandler import EncryptionHandler
+
+        catalog_services = CatalogServices()
+        collection = await catalog_services.get_by_id_api(
+            document_id=collection_id,
+            collection_name="collections",
+        )
+        if not collection or not collection.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collection was not found.",
+            )
+        if not collection.dua:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This collection does not have a DUA attached.",
+            )
+        if not collection.bucket:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="The collection does not have an associated storage bucket.",
+            )
+
+        credential = await self.__get_credential_by_storage_bucket(
+            storage_type=collection.storage_type,
+            bucket_name=collection.bucket,
+        )
+        decoded_credential = EncryptionHandler().decrypt_credentials(credential.credential)
+        object_name = f"{collection.bucket}/documents/{collection.id}/{collection.dua}.pdf"
+        storage_client = StorageClientFactory.create_client(
+            storage_type=collection.storage_type,
+            bucket=collection.bucket,
+            credentials=decoded_credential,
+            minio_endpoint_use="internal",
+        )
+
+        try:
+            if storage_client.get_object_size(object_name) is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="The DUA document could not be found in storage.",
+                )
+            object_stream = storage_client.open_object_stream(object_name)
+        except Exception:
+            storage_client.close()
+            raise
+
+        def stream_with_cleanup() -> Iterator[bytes]:
+            try:
+                yield from object_stream
+            finally:
+                storage_client.close()
+
+        return stream_with_cleanup(), "collection-dua.pdf"
 
     async def complete_upload(
         self,

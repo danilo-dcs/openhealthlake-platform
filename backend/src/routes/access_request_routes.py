@@ -1,10 +1,20 @@
 from fastapi import Depends, APIRouter, Request
 from routes.auth_routes import auth_oauth2_scheme
 from services.AccessRequestServices import AccessRequestServices
-from shared.models.access_requests import AccessRequestModel, AccessRequestSearchPayload, AccessRequestSearchResponse, CouchbaseAccessRequestModel, GrantAccessRequestPayload, RevokeAccessRequestPayload
+from shared.models.access_requests import AccessRequestModel, AccessRequestSearchPayload, AccessRequestSearchResponse, CouchbaseAccessRequestModel, GrantAccessRequestPayload, InviteCollaboratorPayload, RevokeAccessRequestPayload
 
 
 router = APIRouter(prefix="/access-request", tags=["Collection Access Request"])
+
+@router.post("/invite", summary="Invite a user to collaborate on a collection")
+async def invite_collection_collaborator(
+    request: Request,
+    payload: InviteCollaboratorPayload,
+    _: str = Depends(auth_oauth2_scheme),
+) -> dict[str, str]:
+    user_id = request.state.user
+    accessRequestServices = AccessRequestServices()
+    return await accessRequestServices.invite_collaborator(payload=payload, owner_id=user_id)
 
 @router.post(
     "/create", 

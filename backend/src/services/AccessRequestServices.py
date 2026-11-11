@@ -9,6 +9,7 @@ from shared.models.access_requests import (
     AccessRequestSearchPayload,
     CouchbaseAccessRequestModel,
     GrantAccessRequestPayload,
+    InviteCollaboratorPayload,
     RevokeAccessRequestPayload,
 )
 from shared.handlers.CouchbaseQueryBuilder import CouchbaseQueryBuilder
@@ -24,6 +25,77 @@ class AccessRequestServices:
         self.queryBuilder = CouchbaseQueryBuilder(
             scope=self.scope, collection="access_requests"
         )
+
+    async def invite_collaborator(
+        self, payload: InviteCollaboratorPayload, owner_id: str
+    ) -> dict[str, str]:
+        from services.CatalogServices import CatalogServices
+        from services.UserServices import UserServices
+        from shared.handlers.MailingClient import MailingClient
+
+        email = payload.email.strip()
+        if not email or "@" not in email:
+            raise HTTPException(status_code=400, detail="A valid user email is required")
+
+        catalog_services = CatalogServices()
+        user_services = UserServices()
+        collection = await catalog_services.get_by_id_api(
+            document_id=payload.collection_id, collection_name="collections"
+        )
+        if not collection:
+            raise HTTPException(status_code=404, detail="Collection not found")
+
+        collection_owner_id = (collection.inserted_by or "").split(":", 1)[0]
+        if owner_id != collection_owner_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the collection owner can invite collaborators",
+            )
+
+        invited_user = await user_services.list_by_email(email=email)
+        if not invited_user:
+            raise HTTPException(
+                status_code=404,
+                detail="The invited user is not registered in the system",
+            )
+
+        owner_passport = await user_services.list_passport_by_user_id(user_uuid=owner_id)
+        visa_assertions = owner_passport.passportVisaAssertions if owner_passport else []
+        target_visa = next(
+            (
+                assertion.passportVisa
+                for assertion in visa_assertions or []
+                if assertion.passportVisa.visaName
+                == f"{collection.id}:{collection.collection_name}"
+            ),
+            None,
+        )
+        if not target_visa:
+            raise HTTPException(
+                status_code=404,
+                detail="The collection access visa could not be found",
+            )
+
+        await user_services.grant_visas_to_user(
+            user_uuid=invited_user.id, visa_uuids=[target_visa.id]
+        )
+
+        mailing_client = MailingClient()
+        mailing_client.add_subject(
+            f"You were added as a collaborator to {collection.collection_name}"
+        ).add_text_body(
+            f"You were added as a collaborator to the collection {collection.collection_name}.\n"
+            "You can now access it from your OpenHealthLake account."
+        )
+        if not mailing_client.send_email(invited_user.email):
+            raise HTTPException(
+                status_code=502,
+                detail="Access was granted, but the collaborator notification email could not be sent",
+            )
+
+        return {
+            "message": f"{email} was added as a collaborator to {collection.collection_name}"
+        }
 
     async def create_request(
         self, payload: AccessRequestModel

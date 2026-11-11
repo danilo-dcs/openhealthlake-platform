@@ -1,6 +1,8 @@
 """Provider adapters and factory for the application's storage backends."""
 
+import logging
 from typing import Any, Iterator, Literal
+from io import BytesIO
 from urllib.parse import quote, urlsplit, urlunsplit
 
 import boto3
@@ -9,6 +11,7 @@ from fastapi import HTTPException, status
 from google.api_core.exceptions import NotFound as GoogleNotFound
 from google.cloud import storage
 from minio import Minio
+from minio.commonconfig import CopySource
 from minio.error import S3Error
 import requests
 
@@ -59,6 +62,34 @@ class GoogleCloudClient:
     def delete_object(self, object_name: str) -> None:
         self.client.bucket(self.bucket).blob(object_name).delete()
 
+    def upload_object(self, object_name: str, data: bytes, content_type: str) -> None:
+        self.client.bucket(self.bucket).blob(object_name).upload_from_file(
+            BytesIO(data), size=len(data), content_type=content_type
+        )
+
+    def move_object(self, source_name: str, destination_name: str) -> None:
+        source = self.client.bucket(self.bucket).blob(source_name)
+        self.client.bucket(self.bucket).copy_blob(
+            source,
+            self.client.bucket(self.bucket),
+            new_name=destination_name,
+        )
+        source.delete()
+
+    def open_object_stream(self, object_name: str):
+        blob = self.client.bucket(self.bucket).blob(object_name)
+        blob.reload()
+        reader = blob.open("rb")
+
+        def chunks():
+            try:
+                while chunk := reader.read(64 * 1024):
+                    yield chunk
+            finally:
+                reader.close()
+
+        return chunks()
+
     def close(self) -> None:
         self.client.close()
 
@@ -103,6 +134,35 @@ class AwsClient:
 
     def delete_object(self, object_name: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=object_name)
+
+    def upload_object(self, object_name: str, data: bytes, content_type: str) -> None:
+        self.client.put_object(
+            Bucket=self.bucket,
+            Key=object_name,
+            Body=data,
+            ContentLength=len(data),
+            ContentType=content_type,
+        )
+
+    def move_object(self, source_name: str, destination_name: str) -> None:
+        self.client.copy_object(
+            Bucket=self.bucket,
+            Key=destination_name,
+            CopySource={"Bucket": self.bucket, "Key": source_name},
+        )
+        self.client.delete_object(Bucket=self.bucket, Key=source_name)
+
+    def open_object_stream(self, object_name: str):
+        response = self.client.get_object(Bucket=self.bucket, Key=object_name)
+        body = response["Body"]
+
+        def chunks():
+            try:
+                yield from body.iter_chunks(chunk_size=64 * 1024)
+            finally:
+                body.close()
+
+        return chunks()
 
     def close(self) -> None:
         self.client.close()
@@ -179,6 +239,50 @@ class MinioClient:
 
     def delete_object(self, object_name: str) -> None:
         self.client.remove_object(self.bucket, object_name)
+
+    def upload_object(self, object_name: str, data: bytes, content_type: str) -> None:
+        self.client.put_object(
+            self.bucket,
+            object_name,
+            BytesIO(data),
+            length=len(data),
+            content_type=content_type,
+        )
+
+    def move_object(self, source_name: str, destination_name: str) -> None:
+        self.client.copy_object(
+            self.bucket,
+            destination_name,
+            CopySource(self.bucket, source_name),
+        )
+        # A copy is the part required to attach the DUA. Some configured MinIO
+        # credentials can write the destination but cannot delete the staged
+        # source. Do not report the collection creation as failed after the
+        # destination has already been created successfully.
+        try:
+            self.client.remove_object(self.bucket, source_name)
+        except S3Error as error:
+            if error.code != "AccessDenied":
+                raise
+            logging.getLogger(__name__).warning(
+                "MinIO copied %s to %s in bucket %s but could not delete the staged source; "
+                "grant s3:DeleteObject on the staged object prefix to remove it",
+                source_name,
+                destination_name,
+                self.bucket,
+            )
+
+    def open_object_stream(self, object_name: str):
+        response = self.client.get_object(self.bucket, object_name)
+
+        def chunks():
+            try:
+                yield from response.stream(amt=64 * 1024)
+            finally:
+                response.close()
+                response.release_conn()
+
+        return chunks()
 
     def close(self) -> None:
         # MinIO's client has no persistent session close operation.
@@ -267,6 +371,49 @@ class HdfsClient:
 
         if response.status_code != 200 or not response.json().get("boolean", False):
             raise HTTPException(status_code=502, detail=f"Error deleting HDFS file: {response.text}")
+
+    def upload_object(self, object_name: str, data: bytes, content_type: str) -> None:
+        upload_url = self.generate_upload_url(object_name)
+        response = self.session.post(
+            upload_url,
+            data=data,
+            headers={"Content-Type": content_type},
+            timeout=60,
+        )
+        response.raise_for_status()
+
+    def move_object(self, source_name: str, destination_name: str) -> None:
+        url = f"{self.base_url}/webhdfs/v1/{quote(source_name, safe='/')}"
+        params = {"op": "RENAME", "destination": destination_name}
+        if self.username:
+            params["user.name"] = self.username
+
+        response = self.session.put(url, params=params, timeout=30)
+        response.raise_for_status()
+        if not response.json().get("boolean", False):
+            raise HTTPException(status_code=502, detail="HDFS could not move the staged DUA.")
+
+    def open_object_stream(self, object_name: str):
+        url = f"{self.base_url}/webhdfs/v1/{quote(object_name, safe='/')}"
+        params = {"op": "OPEN"}
+        if self.username:
+            params["user.name"] = self.username
+
+        response = self.session.get(
+            url,
+            params=params,
+            stream=True,
+            timeout=(30, 60),
+        )
+        response.raise_for_status()
+
+        def chunks():
+            try:
+                yield from response.iter_content(chunk_size=64 * 1024)
+            finally:
+                response.close()
+
+        return chunks()
 
     def close(self) -> None:
         self.session.close()

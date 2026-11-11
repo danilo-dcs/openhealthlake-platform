@@ -8,6 +8,11 @@ class AccessRequestModel(BaseModel):
     requested_by: str
     owner_id: str
 
+class InviteCollaboratorPayload(BaseModel):
+    collection_id: str
+    email: str
+
+
 class CouchbaseAccessRequestModel(AccessRequestModel):
     requested_at: Optional[int] = None
     owner_email: Optional[str] = None
