@@ -16,6 +16,8 @@ import { onMounted, ref, inject, type Ref, computed } from 'vue'
 import { useDialog } from 'primevue/usedialog'
 
 import { useUserStore } from '@/stores/userStore'
+import type { UserPassportResponse } from '@/shared/interfaces/http/UserVisasResponse'
+import { apiRequestHandler } from '@/shared/api/apiRequestHandler'
 
 const userStore = useUserStore()
 
@@ -33,6 +35,15 @@ const user_id = computed(() => userStore.userId)
 
 const collection = ref<CatalogCollectionRecord>()
 const filesRefreshKey = ref(0)
+const userCollectionAccess = ref<string[]>([])
+const accessCheckComplete = ref(false)
+const accessCheckFailed = ref(false)
+
+const canViewFiles = computed(() => {
+  if (!collection.value) return false
+  const isOwner = Boolean(user_id.value && collection.value.inserted_by.includes(user_id.value))
+  return collection.value.public || isOwner || userCollectionAccess.value.includes(collection.value.id)
+})
 
 const creatorEmail = computed(() => {
   const creator = collection.value?.inserted_by?.trim() ?? ''
@@ -57,9 +68,26 @@ const dialogDefaultProps = {
   modal: true,
 }
 
-onMounted(() => {
+onMounted(async () => {
   const param = dialogRef.value.data
   collection.value = param as CatalogCollectionRecord
+
+  if (!user_id.value) {
+    accessCheckComplete.value = true
+    return
+  }
+
+  try {
+    const passport = await apiRequestHandler<UserPassportResponse>(`/user/visas/${user_id.value}`, 'GET')
+    userCollectionAccess.value = passport.passportVisaAssertions?.map(
+      (assertion) => assertion.passportVisa.visaName.split(':')[0],
+    ) ?? []
+  } catch (error) {
+    console.error('Unable to verify collection access:', error)
+    accessCheckFailed.value = true
+  } finally {
+    accessCheckComplete.value = true
+  }
 })
 
 const getCollectionsTitle = computed(() => {
@@ -135,10 +163,10 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
     </p>
   </article>
   <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-    <div
-      v-if="!collection?.public && !collection?.inserted_by.includes(user_id!)"
-      class="flex justify-center"
-    >
+    <p v-if="accessCheckFailed" class="py-6 text-center text-sm text-red-600" role="alert">
+      Unable to verify access to this collection. Please try again.
+    </p>
+    <div v-else-if="accessCheckComplete && !canViewFiles" class="flex justify-center">
       <Chip
         label="You do not have permission to view the files in this collection. Please request access to
         it!"
@@ -147,7 +175,7 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
       />
     </div>
 
-    <div v-else>
+    <div v-else-if="canViewFiles">
       <Toolbar class="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
         <template #start>
           <strong>List of Files</strong>
@@ -168,5 +196,6 @@ const openUploadFileDialog = (data: CatalogCollectionRecord) => {
 
       <FilesTable :collectionId="collection?.id" :refreshKey="filesRefreshKey" />
     </div>
+    <p v-else class="py-6 text-center text-sm text-gray-500" role="status">Checking collection access…</p>
   </article>
 </template>

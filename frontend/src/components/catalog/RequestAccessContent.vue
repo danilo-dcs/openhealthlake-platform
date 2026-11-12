@@ -7,7 +7,10 @@ import { useToast } from 'primevue'
 
 import type { CatalogCollectionRecord } from '@/shared/interfaces/http/CatalogCollectionResponse'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
-import { onMounted, onBeforeUnmount, ref, inject, type Ref, computed } from 'vue'
+import { onMounted, onBeforeUnmount, ref, shallowRef, inject, type Ref, computed, nextTick, watch } from 'vue'
+import * as pdfjsLib from 'pdfjs-dist'
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import type {
   AccessRequestModel,
   AccessRequestSearchResponse,
@@ -53,10 +56,19 @@ const inviteButtonLoading = ref(false)
 const sendButtonLoading = ref<boolean>(false)
 const duaExpanded = ref(false)
 const duaAcknowledged = ref(false)
-const duaPdfUrl = ref('')
+const duaPdfData = shallowRef<Uint8Array>()
 const duaPdfLoading = ref(false)
 const duaPdfError = ref('')
+const pdfCanvasHost = ref<HTMLDivElement>()
+const pdfPageCount = ref(0)
+const pdfZoom = ref(1)
+let pdfDocument: PDFDocumentProxy | undefined
+let pdfLoadingTask: PDFDocumentLoadingTask | undefined
+let activePdfRenderTask: RenderTask | undefined
+let pdfRenderVersion = 0
 const hasDua = computed(() => Boolean(collection.value?.dua))
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 // LIFECYCLE
 onMounted(() => {
@@ -69,8 +81,74 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (duaPdfUrl.value) URL.revokeObjectURL(duaPdfUrl.value)
+  pdfRenderVersion++
+  activePdfRenderTask?.cancel()
+  const loadingTask = pdfLoadingTask
+  pdfLoadingTask = undefined
+  void loadingTask?.destroy().catch(() => {})
 })
+
+const renderPdfPages = async () => {
+  activePdfRenderTask?.cancel()
+  const renderVersion = ++pdfRenderVersion
+  await nextTick()
+  if (!pdfDocument || !pdfCanvasHost.value) return
+  const canvases = Array.from(pdfCanvasHost.value.querySelectorAll('canvas'))
+
+  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+    if (renderVersion !== pdfRenderVersion) return
+    const page = await pdfDocument.getPage(pageNumber)
+    const canvas = canvases[pageNumber - 1]
+    if (!canvas) continue
+
+    const context = canvas.getContext('2d')
+    if (!context) continue
+    const viewport = page.getViewport({ scale: pdfZoom.value })
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    canvas.style.width = `${viewport.width}px`
+    canvas.style.height = `${viewport.height}px`
+    const renderTask = page.render({ canvas, canvasContext: context, viewport })
+    activePdfRenderTask = renderTask
+    try {
+      await renderTask.promise
+    } finally {
+      if (activePdfRenderTask === renderTask) activePdfRenderTask = undefined
+    }
+  }
+}
+
+watch(duaPdfData, async (data) => {
+  duaPdfError.value = ''
+  pdfRenderVersion++
+  activePdfRenderTask?.cancel()
+  const previousLoadingTask = pdfLoadingTask
+  pdfLoadingTask = undefined
+  pdfDocument = undefined
+  pdfPageCount.value = 0
+  await previousLoadingTask?.destroy().catch(() => {})
+  if (!data) return
+
+  const loadingTask = pdfjsLib.getDocument({ data: data.slice() })
+  pdfLoadingTask = loadingTask
+  try {
+    const document = await loadingTask.promise
+    if (pdfLoadingTask !== loadingTask) return
+    pdfDocument = document
+    pdfPageCount.value = pdfDocument.numPages
+    await renderPdfPages()
+  } catch (error) {
+    if (pdfLoadingTask === loadingTask && !(error instanceof Error && error.name === 'RenderingCancelledException')) {
+      duaPdfError.value = 'Unable to display the Data Usage Agreement.'
+    }
+  }
+})
+
+watch(pdfZoom, renderPdfPages)
+
+const adjustPdfZoom = (amount: number) => {
+  pdfZoom.value = Math.min(2.5, Math.max(0.5, Math.round((pdfZoom.value + amount) * 10) / 10))
+}
 
 // ACTIONS
 
@@ -162,8 +240,7 @@ const fetchCollectionDua = async () => {
       undefined,
       'blob',
     )
-    if (duaPdfUrl.value) URL.revokeObjectURL(duaPdfUrl.value)
-    duaPdfUrl.value = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }))
+    duaPdfData.value = new Uint8Array(await pdf.arrayBuffer())
   } catch (error) {
     duaPdfError.value = error instanceof Error ? error.message : String(error)
   } finally {
@@ -173,6 +250,12 @@ const fetchCollectionDua = async () => {
 
 const toggleDuaViewer = () => {
   duaExpanded.value = !duaExpanded.value
+  if (!duaExpanded.value) {
+    pdfRenderVersion++
+    activePdfRenderTask?.cancel()
+  } else if (pdfDocument) {
+    renderPdfPages()
+  }
 }
 
 // API REQUESTS
@@ -265,9 +348,11 @@ const fetchAccessRequestData = async () => {
       <b>You have already requested access to this collection. Please wait for approval</b>
     </span>
   </div>
-  <div class="flex flex-column justify-center mt-5" v-else>
-    <div class="flex flex-col items-center">
-      <p class="mb-4 text-center">Request access by sending an email to the collection's owner</p>
+  <div class="mt-5 flex w-full flex-col gap-5" v-else>
+    <article class="w-full rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm sm:p-6">
+      <p class="text-sm text-gray-600 sm:text-base"><strong>Request access by sending an email to the collection's owner</strong></p>
+    </article>
+    <div class="flex w-full flex-col items-stretch">
       <section v-if="hasDua" class="w-full rounded-lg border border-surface-300 p-4">
         <button
           type="button"
@@ -284,12 +369,39 @@ const fetchAccessRequestData = async () => {
             <p class="text-red-500">Unable to load the Data Usage Agreement.</p>
             <Button label="Try again" icon="pi pi-refresh" text @click="fetchCollectionDua" />
           </div>
-          <iframe
-            v-else-if="duaPdfUrl"
-            :src="duaPdfUrl"
-            title="Data Usage Agreement PDF"
-            class="h-[55vh] min-h-80 w-full rounded border"
-          />
+          <div v-else-if="duaPdfData" class="overflow-hidden rounded border border-gray-300">
+            <div class="flex items-center justify-center gap-3 border-b border-gray-300 bg-gray-100 p-2">
+              <Button
+                type="button"
+                icon="pi pi-minus"
+                text
+                rounded
+                aria-label="Zoom out"
+                :disabled="pdfZoom <= 0.5"
+                @click="adjustPdfZoom(-0.1)"
+              />
+              <span class="min-w-14 text-center text-sm text-gray-700">{{ Math.round(pdfZoom * 100) }}%</span>
+              <Button
+                type="button"
+                icon="pi pi-plus"
+                text
+                rounded
+                aria-label="Zoom in"
+                :disabled="pdfZoom >= 2.5"
+                @click="adjustPdfZoom(0.1)"
+              />
+            </div>
+            <div class="h-[55vh] min-h-80 overflow-auto bg-gray-800 p-4">
+              <div ref="pdfCanvasHost" class="flex flex-col items-center gap-4">
+                <canvas
+                  v-for="pageNumber in pdfPageCount"
+                  :key="pageNumber"
+                  class="max-w-none bg-white shadow"
+                  :aria-label="`Data Usage Agreement page ${pageNumber}`"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       <div v-if="hasDua" class="mt-4 flex w-full items-start gap-3">
@@ -298,14 +410,14 @@ const fetchAccessRequestData = async () => {
           v-model="duaAcknowledged"
           type="checkbox"
           class="mt-1 h-4 w-4"
-          :disabled="!duaPdfUrl"
+          :disabled="!duaPdfData"
         />
         <label for="dua-acknowledgment" class="text-sm">
           I acknowledge the usage terms and take legal responsibility for any misconduct.
         </label>
       </div>
       <Button
-        class="mt-5"
+        class="mt-5 self-center"
         icon="pi pi-envelope"
         severity="bg-primary-500"
         label="Send"

@@ -252,7 +252,13 @@ const openItemInfoDialog = (data: CatalogCollectionRecord) => {
 
 const openRequestAccessDialog = (data: CatalogCollectionRecord) => {
   const dialogSpecs = {
-    props: { ...dialogDefaultProps, header: 'Access Request' },
+    props: {
+      ...dialogDefaultProps,
+      header: 'Access Request',
+      closable: true,
+      style: { width: '85vw', maxWidth: '90rem' },
+      breakpoints: { '960px': '90vw', '640px': '96vw' },
+    },
     templates: {},
     data: data,
     onClose: () => {},
